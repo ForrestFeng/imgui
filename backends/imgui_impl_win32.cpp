@@ -22,6 +22,11 @@
 #include <tchar.h>
 #include <dwmapi.h>
 
+#if _DEBUG
+#include <stdio.h>
+#endif
+
+
 // Configuration flags to add in your imconfig.h file:
 //#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD              // Disable gamepad support. This was meaningful before <1.81 but we now load XInput dynamically so the option is now less relevant.
 
@@ -835,10 +840,14 @@ bool ImGui::WaitAndPollEvents(int timeout/* = 0*/)
     MSG msg;
     while (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
     {
+        
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);
         if (msg.message == WM_QUIT)
             done = true;
+        #if _DEBUG
+        printf("Windows MSG %d, time %d, point (%d, %d)\n", msg.message, msg.time, msg.pt.x, msg.pt.y);
+        #endif
     }
 
     return !done;

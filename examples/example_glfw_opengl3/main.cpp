@@ -92,7 +92,7 @@ int main(int, char**)
     //IM_ASSERT(font != NULL);
 
     // Our state
-    bool show_demo_window = true;
+    bool show_demo_window = false;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -106,7 +106,7 @@ int main(int, char**)
         // -1 wait for ever untill a event come
         // positive number wait untill timedout or event comes
         // call ImGui::RequestRedraw to awake waiting of this function. Return 0 to signel a quict event.
-        int timeout = 0;
+        int timeout = -1;
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.

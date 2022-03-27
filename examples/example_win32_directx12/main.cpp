@@ -125,7 +125,7 @@ int main(int, char**)
         // -1 wait for ever untill a event come
         // positive number wait untill timedout or event comes
         // call ImGui::RequestRedraw to awake waiting of this function. Return 0 to signel a quict event.
-        int timeout = 0;
+        int timeout = -1;
         if (!ImGui::WaitAndPollEvents(timeout))
         {
             done = true; break;

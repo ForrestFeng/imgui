@@ -76,6 +76,8 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+#include "timercpp.h"
+
 #ifndef IMGUI_DISABLE
 
 // System includes
@@ -260,6 +262,18 @@ static void ShowDemoWindowTables();
 static void ShowDemoWindowColumns();
 static void ShowDemoWindowMisc();
 
+static bool show_time_elapsed = false;
+void timer_callback(void* ptr_data)
+{
+    int* time_elapsed = (int*)ptr_data;
+    *time_elapsed += 1;
+    if (show_time_elapsed)
+    {
+        printf("timer_callback request redraw %d\n", time_elapsed);
+        ImGui::RequestRedraw(ImGuiRedrawFlags_Everything);
+    }
+}
+
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does.
 // You may then search for keywords in the code when you are interested by a specific feature.
@@ -342,6 +356,16 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (unsaved_document)   window_flags |= ImGuiWindowFlags_UnsavedDocument;
     if (no_close)           p_open = NULL; // Don't pass our bool* to Begin
 
+    // demo of a timer
+    static int seconds_elapsed;
+    static Timer demo_timer(&seconds_elapsed);
+    if (seconds_elapsed == 0)
+    {
+        // run timer_callback every 1 second
+        demo_timer.setInterval(timer_callback, 1*1000);
+        seconds_elapsed++;
+    }
+
     // We specify a default position/size in case there's no data in the .ini file.
     // We only do it to make the demo applications a little more welcoming, but typically this isn't required.
     const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -407,6 +431,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
     }
 
     ImGui::Text("dear imgui says hello. (%s)", IMGUI_VERSION);
+    ImGui::Checkbox("Show time elapased", &show_time_elapsed);
+    if (show_time_elapsed)
+    {
+        ImGui::Text("Time elapsed since app startup: %d seconds", seconds_elapsed);
+    }
     ImGui::Spacing();
 
     IMGUI_DEMO_MARKER("Help");
