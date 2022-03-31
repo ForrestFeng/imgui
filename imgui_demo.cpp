@@ -269,7 +269,7 @@ void timer_callback(void* ptr_data)
     *time_elapsed += 1;
     if (show_time_elapsed)
     {
-        printf("timer_callback request redraw %d\n", time_elapsed);
+        printf("timer_callback request redraw %d\n", *time_elapsed);
         ImGui::RequestRedraw(ImGuiRedrawFlags_Everything);
     }
 }

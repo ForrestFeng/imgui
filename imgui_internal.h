@@ -1594,7 +1594,10 @@ struct ImGuiContext
     // Item/widgets state and tracking information
     ImGuiID                 DebugHookIdInfo;                    // Will call core hooks: DebugHookIdInfo() from GetID functions, used by Stack Tool [next HoveredId/ActiveId to not pull in an extra cache-line]
     ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
+    ImRect                  HoveredBB;
     ImGuiID                 HoveredIdPreviousFrame;
+    ImRect                  HoveredBBPreviousFrame;
+    ImVec2                  MousePosPreviousFrame;
     bool                    HoveredIdAllowOverlap;
     bool                    HoveredIdUsingMouseWheel;           // Hovered widget will use mouse wheel. Blocks scrolling the underlying window.
     bool                    HoveredIdPreviousFrameUsingMouseWheel;
@@ -2108,6 +2111,8 @@ struct IMGUI_API ImGuiWindow
     int                     MemoryDrawListVtxCapacity;
     bool                    MemoryCompacted;                    // Set when window extraneous data have been garbage collected
 
+    ImVector<ImRect>        HitTestRects;                       // bb of the items which are able to interact with mouse hovering
+
 public:
     ImGuiWindow(ImGuiContext* context, const char* name);
     ~ImGuiWindow();
@@ -2575,6 +2580,8 @@ namespace ImGui
     IMGUI_API void          ClearActiveID();
     IMGUI_API ImGuiID       GetHoveredID();
     IMGUI_API void          SetHoveredID(ImGuiID id);
+    IMGUI_API void          SetHoveredBB(ImRect bb);
+
     IMGUI_API void          KeepAliveID(ImGuiID id);
     IMGUI_API void          MarkItemEdited(ImGuiID id);     // Mark data associated to given item as "edited", used by IsItemDeactivatedAfterEdit() function.
     IMGUI_API void          PushOverrideID(ImGuiID id);     // Push given value as-is at the top of the ID stack (whereas PushID combines old and new hashes)

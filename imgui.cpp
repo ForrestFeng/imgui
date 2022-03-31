@@ -3428,6 +3428,12 @@ void ImGui::SetHoveredID(ImGuiID id)
         g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
 }
 
+void ImGui::SetHoveredBB(ImRect bb)
+{
+    ImGuiContext& g = *GImGui;
+    g.HoveredBB = bb;
+}
+
 ImGuiID ImGui::GetHoveredID()
 {
     ImGuiContext& g = *GImGui;
@@ -3551,8 +3557,10 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
 
     // We exceptionally allow this function to be called with id==0 to allow using it for easy high-level
     // hover test in widgets code. We could also decide to split this function is two.
-    if (id != 0)
+    if (id != 0) {
         SetHoveredID(id);
+        SetHoveredBB(bb);
+    }
 
     // When disabled we'll return false but still set HoveredId
     ImGuiItemFlags item_flags = (g.LastItemData.ID == id ? g.LastItemData.InFlags : g.CurrentItemFlags);
@@ -3564,7 +3572,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         g.HoveredIdDisabled = true;
         return false;
     }
-
+    //GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
     if (id != 0)
     {
         // [DEBUG] Item Picker tool!
@@ -3573,7 +3581,10 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         // items if we perform the test in ItemAdd(), but that would incur a small runtime cost.
         // #define IMGUI_DEBUG_TOOL_ITEM_PICKER_EX in imconfig.h if you want this check to also be performed in ItemAdd().
         if (g.DebugItemPickerActive && g.HoveredIdPreviousFrame == id)
+        {
             GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
+            
+        }
         if (g.DebugItemPickerBreakId == id)
             IM_DEBUG_BREAK();
     }
@@ -4333,6 +4344,8 @@ void ImGui::NewFrame()
     if (g.HoveredId && g.ActiveId != g.HoveredId)
         g.HoveredIdNotActiveTimer += g.IO.DeltaTime;
     g.HoveredIdPreviousFrame = g.HoveredId;
+    g.HoveredBBPreviousFrame = g.HoveredBB;
+    g.MousePosPreviousFrame = g.IO.MousePos;
     g.HoveredIdPreviousFrameUsingMouseWheel = g.HoveredIdUsingMouseWheel;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
@@ -4424,6 +4437,7 @@ void ImGui::NewFrame()
         window->BeginCount = 0;
         window->Active = false;
         window->WriteAccessed = false;
+        window->HitTestRects.clear();
 
         // Garbage collect transient buffers of recently unused windows
         if (!window->WasActive && !window->MemoryCompacted && window->LastTimeActive < memory_compact_start_time)
@@ -8315,11 +8329,28 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     const bool is_clipped = IsClippedEx(bb, id);
     if (is_clipped)
         return false;
-    //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
+    if (g.IO.KeyAlt)
+    {
+        if (id != 0)
+            window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 0, 0, 170)); // [DEBUG]
+        else
+            window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 100)); // [DEBUG]
+
+
+    }
+
+    // trace the bb for hit test
+    // only the items that is visible and would respose to windows hovering event will be cached.
+    if (!window->SkipItems && bb.Overlaps(window->ClipRect))
+    {
+        window->HitTestRects.push_back(bb);
+        window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 100)); // [DEBUG]
+    }
 
     // We need to calculate this now to take account of the current clipping rectangle (as items like Selectable may change them)
     if (IsMouseHoveringRect(bb.Min, bb.Max))
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredRect;
+
     return true;
 }
 
@@ -12992,6 +13023,12 @@ void ImGui::DebugNodeWindowsListByBeginStackParent(ImGuiWindow** windows, int wi
 void ImGui::UpdateDebugToolItemPicker()
 {
     ImGuiContext& g = *GImGui;
+    /*ImGuiWindow* window = g.ActiveIdPreviousFrameWindow;
+    if (window == nullptr)
+        return;*/
+    ImRect bb = g.HoveredBBPreviousFrame;
+    ImVec2 mouse_pos = g.MousePosPreviousFrame;
+
     g.DebugItemPickerBreakId = 0;
     if (!g.DebugItemPickerActive)
         return;
@@ -13005,9 +13042,20 @@ void ImGui::UpdateDebugToolItemPicker()
         g.DebugItemPickerBreakId = hovered_id;
         g.DebugItemPickerActive = false;
     }
+
+    //bb.Translate(window->Pos);
+    //int hit = 0;
+    //if (bb.Contains(mouse_pos))
+    //{
+    //    hit = 1;
+    //}
+
     SetNextWindowBgAlpha(0.60f);
     BeginTooltip();
     Text("HoveredId: 0x%08X", hovered_id);
+    Text("Mouse Position: (x=%.f, y=%.f)", mouse_pos.x, mouse_pos.y);
+    //Text("WindowPosition: (%.f, %.f)", window->Pos.x, window->Pos.y);
+    Text("Bounding   Box: (x0=%.f, x1=%.f, y0=%.f, y1=%.f)", bb.Min.x, bb.Max.x, bb.Min.y, bb.Max.y);
     Text("Press ESC to abort picking.");
     TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
     EndTooltip();
