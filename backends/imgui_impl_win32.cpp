@@ -807,7 +807,7 @@ bool ImGui::WaitAndPollEvents(int timeout/* = 0*/)
     DWORD dw_timeout = 0;
     if (timeout == -1)
     {
-        dw_timeout = 4294967295; // MAX value of DWORD
+        dw_timeout = INFINITE; // MAX value of DWORD
     }
     else if (timeout > 0)
     {
