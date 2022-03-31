@@ -8341,7 +8341,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 
     // trace the bb for hit test
     // only the items that is visible and would respose to windows hovering event will be cached.
-    if (!window->SkipItems && bb.Overlaps(window->ClipRect))
+    if (!window->SkipItems && bb.Overlaps(window->ClipRect) && id !=0)
     {
         window->HitTestRects.push_back(bb);
         window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 100)); // [DEBUG]

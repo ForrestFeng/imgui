@@ -164,8 +164,19 @@ int main(int, char**)
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        if (io.WantCaptureMouse || io.WantCaptureKeyboard)
+        
+        // original code
+        //bool WantCaptureMouse = (mouse_avail && (g.HoveredWindow != NULL || mouse_any_down)) || has_open_popup;
+        const bool has_open_popup = (g.OpenPopupStack.Size > 0);
+        bool mouse_any_down = false;
+        for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
         {
+            mouse_any_down |= io.MouseDown[i];
+        }
+
+        if (has_open_popup || mouse_any_down)// || io.WantCaptureKeyboard)
+        {
+            printf("^^^^^^^^^^^^^^^^^Mouse down or has popup\n");
             create_new_frame = true;
         }
         else if (msg.message == 512)//mouse move
@@ -182,7 +193,7 @@ int main(int, char**)
                 bool found = false;
                 for (int i = 0; i != g.Windows.Size; i++)
                 {
-                    
+
                     if (found) break;
 
                     ImGuiWindow* window = g.Windows[i];
@@ -216,6 +227,25 @@ int main(int, char**)
                     create_new_frame = false;
                 }
             }
+            else
+            {
+                printf("!!!!!!!!!!!!!!!!!!!!!!!!Unexpected error get mouse pos create_new_frame:%d\n", create_new_frame);
+            }
+        }
+        else if (msg.message == 275) //WM_TIMER message, do not know why we get this message
+        {
+            // Mouse leve view port client area
+            //675 		WM_MOUSELEAVE
+            // Mouse move in None-client area
+            //160 		WM_NCMOUSEMOVE
+            // Mouse leve view port None-client area
+            //674 		WM_NCMOUSELEAVE
+            //257 		WM_KEYUP
+            printf("\t\t\tWM_TIMER\n");
+        }
+        else
+        {
+            printf("********* Unhandled MSG is %d, create_new_frame is %d\n", msg.message, create_new_frame);
         }
 
         if (create_new_frame)
