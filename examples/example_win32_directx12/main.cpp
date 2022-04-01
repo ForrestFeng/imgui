@@ -158,6 +158,9 @@ int main(int, char**)
         }
 
         static bool create_new_frame = true;
+        static bool bb_test_hit = false;
+        static bool bb_test_hit_last_test = false;
+
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -182,20 +185,17 @@ int main(int, char**)
         else if (msg.message == 512)//mouse move
         {
             ImVec2 mouse_pos;
-
             POINT pos;
+            bb_test_hit = false;
             if (::GetCursorPos(&pos) && ::ScreenToClient(hwnd, &pos))
             {
                 mouse_pos.x = (float)pos.x;
                 mouse_pos.y = (float)pos.y;
 
                 // hit test
-                bool found = false;
-               
                 for (int i = 0; i != g.Windows.Size; i++)
                 {
-
-                    if (found) break;
+                    if (bb_test_hit) break;
 
                     // Quick check by pass certain windows
                     ImGuiWindow* window = g.Windows[i];                    
@@ -224,7 +224,7 @@ int main(int, char**)
                         continue;
                     else if(!bb2.Contains(mouse_pos)) // mouse is hovering on the edge of the mouse
                     { 
-                        found = true;
+                        bb_test_hit = true;
                         break;
                     }
 
@@ -233,25 +233,38 @@ int main(int, char**)
                     {
                         ImRect bb = window->HitTestRects[j];
                         //bb.Translate(window->Pos);
-                        printf("Window Position: (x=%.f, y=%.f) Name: %s \n", window->Pos.x, window->Pos.y, window->Name);
+                     /*   printf("Window Position: (x=%.f, y=%.f) Name: %s \n", window->Pos.x, window->Pos.y, window->Name);
                         printf("\tMouse Position: (x=%.f, y=%.f)\n", mouse_pos.x, mouse_pos.y);
                         printf("\t\tCurrent Bounding Box : (x0=%.f, x1=%.f, y0=%.f, y1=%.f)\n", bb.Min.x, bb.Max.x, bb.Min.y, bb.Max.y);
+                    */
                         if (bb.Contains(mouse_pos)) {
-                            found = true;
+                            bb_test_hit = true;
                             break;
                         }
                     }
                 }
 
-                if (found)
+                if (bb_test_hit)
                 {
-                    printf("HIT IT---------------------------------\n");
+                    // NOT HIT -> HIT                
+                    printf("----------------------- HIT\n");
                     create_new_frame = true;
+                    bb_test_hit_last_test = bb_test_hit;
                 }
                 else
                 {
-                    printf("---------------------------------NOT HIT\n");
-                    create_new_frame = false;
+                    // HIT -> NOT HIT
+                    if (bb_test_hit_last_test)
+                    {
+                        create_new_frame = true;
+                        printf("---------------------------------HIT -> Not Hit\n");
+                    }
+                    else // NOT HIT -> NOT HIT
+                    {
+                        //printf("---------------------------------NOT HIT\n");
+                        create_new_frame = false;                     
+                    }
+                    bb_test_hit_last_test = bb_test_hit;
                 }
             }
             else
@@ -268,11 +281,15 @@ int main(int, char**)
             // Mouse leve view port None-client area
             //674 		WM_NCMOUSELEAVE
             //257 		WM_KEYUP
-            printf("\t\t\tWM_TIMER\n");
+            printf("\t\t\tWM_TIMER(%d)  create_new_frame: %d\n", msg.message, create_new_frame);
+        }
+        else if (msg.message == 15)
+        {
+            printf("\t\t\t\tWM_PAINT(%d) create_new_frame: %d\n", msg.message, create_new_frame);
         }
         else
         {
-            printf("********* Unhandled MSG is %d, create_new_frame is %d\n", msg.message, create_new_frame);
+            printf("********* Unhandled MSG(%d), create_new_frame: %d\n", msg.message, create_new_frame);
         }
 
         if (create_new_frame)
