@@ -8335,8 +8335,6 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
             window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 0, 0, 170)); // [DEBUG]
         else
             window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 100)); // [DEBUG]
-
-
     }
 
     // trace the bb for hit test
@@ -8344,7 +8342,6 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     if (!window->SkipItems && bb.Overlaps(window->ClipRect) && id !=0)
     {
         window->HitTestRects.push_back(bb);
-        window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 100)); // [DEBUG]
     }
 
     // We need to calculate this now to take account of the current clipping rectangle (as items like Selectable may change them)
