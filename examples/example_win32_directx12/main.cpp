@@ -198,8 +198,12 @@ int main(int, char**)
                     if (bb_test_hit) break;
 
                     // Quick check by pass certain windows
-                    ImGuiWindow* window = g.Windows[i];
-                    if (window->Hidden || (window->Flags & ImGuiWindowFlags_NoMouseInputs) || (strcmp(window->Name, "Debug##Default") == 0) )
+                    ImGuiWindow* window = g.WindowsFocusOrder[i];
+                    if (window->Hidden ||
+                        (window->Flags & ImGuiWindowFlags_NoMouseInputs) ||
+                        (strcmp(window->Name, "Debug##Default") == 0) ||
+                        (window->IsExplicitChild) // skip child window for e.g. the table in a window
+                        )
                     {                        
                         continue;
                     }
