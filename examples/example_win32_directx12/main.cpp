@@ -198,14 +198,9 @@ int main(int, char**)
                     if (bb_test_hit) break;
 
                     // Quick check by pass certain windows
-                    ImGuiWindow* window = g.Windows[i];                    
-                    if (window->Hidden)
-                    {
-                        printf("Window Not Acvie or Hidden: %s\n", window->Name);
-                        continue;
-                    }
-                    if (window->Flags & ImGuiWindowFlags_NoMouseInputs)
-                    {
+                    ImGuiWindow* window = g.Windows[i];
+                    if (window->Hidden || (window->Flags & ImGuiWindowFlags_NoMouseInputs) || (strcmp(window->Name, "Debug##Default") == 0) )
+                    {                        
                         continue;
                     }
 
