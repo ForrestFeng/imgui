@@ -191,17 +191,43 @@ int main(int, char**)
 
                 // hit test
                 bool found = false;
+               
                 for (int i = 0; i != g.Windows.Size; i++)
                 {
 
                     if (found) break;
 
-                    ImGuiWindow* window = g.Windows[i];
-                    // first check if the mouse is inside the window
-                    if (!window->Rect().Contains(mouse_pos))
-                    {
+                    // Quick check by pass certain windows
+                    ImGuiWindow* window = g.Windows[i];                    
+                    if (!window->Active || window->Hidden)
                         continue;
+                    if (window->Flags & ImGuiWindowFlags_NoMouseInputs)
+                        continue;
+
+                    // Test if mouse is on the edge of the window
+                    ImVec2 padding_regular = g.Style.TouchExtraPadding;
+                    ImVec2 padding_for_resize = g.IO.ConfigWindowsResizeFromEdges ? g.WindowsHoverPadding : padding_regular;
+                    // Using the clipped AABB, a child window will typically be clipped by its parent (not always)
+                    ImRect bb(window->OuterRectClipped);
+                    ImRect bb2(window->OuterRectClipped);
+                    if (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                    {
+                        bb.Expand(padding_regular);
+                        bb2.Expand(ImVec2(-padding_regular.x, -padding_regular.y));
+                    }                        
+                    else
+                    {
+                        bb.Expand(padding_for_resize);
+                        bb2.Expand(ImVec2(-padding_for_resize.x, -padding_for_resize.y));
                     }
+                    if (!bb.Contains(mouse_pos))
+                        continue;
+                    else if(!bb2.Contains(mouse_pos)) // mouse is hovering on the edge of the mouse
+                    { 
+                        found = true;
+                        break;
+                    }
+
                     // then hit test of rects in the window
                     for (int j = 0; j != window->HitTestRects.Size; j++)
                     {
@@ -216,6 +242,7 @@ int main(int, char**)
                         }
                     }
                 }
+
                 if (found)
                 {
                     printf("HIT IT---------------------------------\n");
