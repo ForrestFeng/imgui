@@ -192,17 +192,22 @@ int main(int, char**)
                 mouse_pos.x = (float)pos.x;
                 mouse_pos.y = (float)pos.y;
 
-                // hit test
-                for (int i = 0; i != g.Windows.Size; i++)
+                // hit test in the order of from front to back
+                for (int i = g.WindowsFocusOrder.Size-1; i > -1; i--)
                 {
                     if (bb_test_hit) break;
 
                     // Quick check by pass certain windows
                     ImGuiWindow* window = g.Windows[i];                    
-                    if (!window->Active || window->Hidden)
+                    if (window->Hidden)
+                    {
+                        printf("Window Not Acvie or Hidden: %s\n", window->Name);
                         continue;
+                    }
                     if (window->Flags & ImGuiWindowFlags_NoMouseInputs)
+                    {
                         continue;
+                    }
 
                     // Test if mouse is on the edge of the window
                     ImVec2 padding_regular = g.Style.TouchExtraPadding;
@@ -221,27 +226,33 @@ int main(int, char**)
                         bb2.Expand(ImVec2(-padding_for_resize.x, -padding_for_resize.y));
                     }
                     if (!bb.Contains(mouse_pos))
+                    {
                         continue;
+                    }
                     else if(!bb2.Contains(mouse_pos)) // mouse is hovering on the edge of the mouse
                     { 
                         bb_test_hit = true;
                         break;
                     }
 
-                    // then hit test of rects in the window
+                    // then hit test of rects in the window (clapsed window only has two or a few rects to test for clopase icon and close icon)
+                    printf("Windows do hit test: %s\n", window->Name);                    
                     for (int j = 0; j != window->HitTestRects.Size; j++)
                     {
                         ImRect bb = window->HitTestRects[j];
                         //bb.Translate(window->Pos);
-                     /*   printf("Window Position: (x=%.f, y=%.f) Name: %s \n", window->Pos.x, window->Pos.y, window->Name);
+                        /*   printf("Window Position: (x=%.f, y=%.f) Name: %s \n", window->Pos.x, window->Pos.y, window->Name);
                         printf("\tMouse Position: (x=%.f, y=%.f)\n", mouse_pos.x, mouse_pos.y);
                         printf("\t\tCurrent Bounding Box : (x0=%.f, x1=%.f, y0=%.f, y1=%.f)\n", bb.Min.x, bb.Max.x, bb.Min.y, bb.Max.y);
-                    */
+                        */
                         if (bb.Contains(mouse_pos)) {
                             bb_test_hit = true;
                             break;
                         }
                     }
+
+                    // do not test other windows whose display order is less than current window
+                    break;
                 }
 
                 if (bb_test_hit)
