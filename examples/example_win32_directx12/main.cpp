@@ -125,8 +125,7 @@ int main(int, char**)
     while (!done)
     {
         ImGuiContext& g = *GImGui;
-        ImDrawData* draw_data = ImGui::GetDrawData();
-        ImGuiIO& io = ImGui::GetIO();
+        //ImDrawData* draw_data = ImGui::GetDrawData();
 
 
         // wait and poll event
@@ -204,7 +203,7 @@ int main(int, char**)
                         (strcmp(window->Name, "Debug##Default") == 0) ||
                         (window->IsExplicitChild) // skip child window for e.g. the table in a window
                         )
-                    {                        
+                    {
                         continue;
                     }
 
@@ -212,23 +211,23 @@ int main(int, char**)
                     ImVec2 padding_regular = g.Style.TouchExtraPadding;
                     ImVec2 padding_for_resize = g.IO.ConfigWindowsResizeFromEdges ? g.WindowsHoverPadding : padding_regular;
                     // Using the clipped AABB, a child window will typically be clipped by its parent (not always)
-                    ImRect bb(window->OuterRectClipped);
-                    ImRect bb2(window->OuterRectClipped);
+                    ImRect bb_inc_padding(window->OuterRectClipped);
+                    ImRect bb_exc_padding(window->OuterRectClipped);
                     if (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
                     {
-                        bb.Expand(padding_regular);
-                        bb2.Expand(ImVec2(-padding_regular.x, -padding_regular.y));
-                    }                        
+                        bb_inc_padding.Expand(padding_regular);
+                        bb_exc_padding.Expand(ImVec2(-padding_regular.x, -padding_regular.y));
+                    }
                     else
                     {
-                        bb.Expand(padding_for_resize);
-                        bb2.Expand(ImVec2(-padding_for_resize.x, -padding_for_resize.y));
+                        bb_inc_padding.Expand(padding_for_resize);
+                        bb_exc_padding.Expand(ImVec2(-padding_for_resize.x, -padding_for_resize.y));
                     }
-                    if (!bb.Contains(mouse_pos))
+                    if (!bb_inc_padding.Contains(mouse_pos))
                     {
                         continue;
                     }
-                    else if(!bb2.Contains(mouse_pos)) // mouse is hovering on the edge of the mouse
+                    else if(!bb_exc_padding.Contains(mouse_pos)) // mouse is hovering on the edge of the mouse
                     { 
                         bb_test_hit = true;
                         break;
@@ -256,7 +255,6 @@ int main(int, char**)
 
                 if (bb_test_hit)
                 {
-                    // NOT HIT -> HIT                
                     printf("----------------------- HIT\n");
                     create_new_frame = true;
                     bb_test_hit_last_test = bb_test_hit;
@@ -266,12 +264,11 @@ int main(int, char**)
                     // HIT -> NOT HIT
                     if (bb_test_hit_last_test)
                     {
-                        create_new_frame = true;
                         printf("---------------------------------HIT -> Not Hit\n");
+                        create_new_frame = true;
                     }
                     else // NOT HIT -> NOT HIT
                     {
-                        //printf("---------------------------------NOT HIT\n");
                         create_new_frame = false;                     
                     }
                     bb_test_hit_last_test = bb_test_hit;
