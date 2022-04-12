@@ -148,7 +148,7 @@ static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const 
 // - BulletTextV()
 //-------------------------------------------------------------------------
 
-void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
+void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags, ImGuiTextColorCallback color_callback, void* cb_context)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -213,7 +213,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
                 if (!line_end)
                     line_end = text_end;
                 text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
-                RenderText(pos, line, line_end, false);
+                RenderText(pos, line, line_end, false, color_callback, cb_context);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
                 line_rect.Max.y += line_height;
@@ -251,7 +251,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
             return;
 
         // Render (we don't hide text after ## in this end-user function)
-        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
+        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width, color_callback, cb_context);
     }
 }
 
@@ -296,6 +296,11 @@ void ImGui::TextColoredV(const ImVec4& col, const char* fmt, va_list args)
     else
         TextV(fmt, args);
     PopStyleColor();
+}
+
+void ImGui::TextColorful(const char* text, const char* text_end, ImGuiTextColorCallback color_callback, void* cb_context)
+{
+    TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText, color_callback, cb_context);
 }
 
 void ImGui::TextDisabled(const char* fmt, ...)

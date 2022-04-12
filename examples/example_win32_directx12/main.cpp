@@ -340,6 +340,26 @@ int main(int, char**)
             {
                 ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
                 ImGui::Text("Hello from another window!");
+                
+
+                // Demo the colorful text. We use hard coded index here, in practice, we can generate the index for a pattern or text with a grep like tool.
+                char* text = "Hello, Dear ImGui Colorfull Text";
+                //            0      7    12    18        28
+                auto color_callback =  [](const char* pos, const char* begin, const char* end, void* c) -> ImU32
+                {
+                    if (pos >= begin + 28)
+                        return ImColor(0, 0, 255, 255);
+                    else if (pos >= begin + 18)
+                        return ImColor(255, 255, 0, 255);
+                    else if (pos >= begin + 12)
+                        return ImColor(0, 255, 0, 255);
+                    else if (pos >= begin + 7)
+                        return ImColor(255, 0, 0, 255);
+                    else
+                        return ImColor(255,255,255,255);
+                };   
+                ImGui::TextColorful(text, NULL, color_callback, NULL);
+
                 if (ImGui::Button("Close Me"))
                     show_another_window = false;
                 ImGui::End();
