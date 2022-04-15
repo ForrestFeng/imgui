@@ -12,6 +12,7 @@
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <tchar.h>
+#include <time.h>
 
 #ifdef _DEBUG
 #define DX12_ENABLE_DEBUG_LAYER
@@ -61,6 +62,11 @@ void WaitForLastSubmittedFrame();
 FrameContext* WaitForNextFrameResources();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+#if _DEBUG
+#define LOG_DEBUG(_FMT,...)       { time_t tm;time(&tm);printf("[%s] " _FMT, ctime(&tm), __VA_ARGS__);}
+#else
+#define LOG_DEBUG(_FMT,...)  {};
+#endif
 // Main code
 int main(int, char**)
 {
@@ -178,7 +184,7 @@ int main(int, char**)
 
         if (has_open_popup || mouse_any_down)// || io.WantCaptureKeyboard)
         {
-            printf("^^^^^^^^^^^^^^^^^Mouse down or has popup\n");
+            LOG_DEBUG("^^^^^^^^^^^^^^^^^Mouse down or has popup\n")
             create_new_frame = true;
         }
         else if (msg.message == 512)//mouse move
@@ -234,14 +240,14 @@ int main(int, char**)
                     }
 
                     // then hit test of rects in the window (clapsed window only has two or a few rects to test for clopase icon and close icon)
-                    printf("Windows do hit test: %s\n", window->Name);                    
+                    LOG_DEBUG("Windows do hit test: %s\n", window->Name);                    
                     for (int j = 0; j != window->HitTestRects.Size; j++)
                     {
                         ImRect bb = window->HitTestRects[j];
                         //bb.Translate(window->Pos);
-                        /*   printf("Window Position: (x=%.f, y=%.f) Name: %s \n", window->Pos.x, window->Pos.y, window->Name);
-                        printf("\tMouse Position: (x=%.f, y=%.f)\n", mouse_pos.x, mouse_pos.y);
-                        printf("\t\tCurrent Bounding Box : (x0=%.f, x1=%.f, y0=%.f, y1=%.f)\n", bb.Min.x, bb.Max.x, bb.Min.y, bb.Max.y);
+                        /*   LOG_DEBUG("Window Position: (x=%.f, y=%.f) Name: %s \n", window->Pos.x, window->Pos.y, window->Name);
+                        LOG_DEBUG("\tMouse Position: (x=%.f, y=%.f)\n", mouse_pos.x, mouse_pos.y);
+                        LOG_DEBUG("\t\tCurrent Bounding Box : (x0=%.f, x1=%.f, y0=%.f, y1=%.f)\n", bb.Min.x, bb.Max.x, bb.Min.y, bb.Max.y);
                         */
                         if (bb.Contains(mouse_pos)) {
                             bb_test_hit = true;
@@ -255,7 +261,7 @@ int main(int, char**)
 
                 if (bb_test_hit)
                 {
-                    printf("----------------------- HIT\n");
+                    LOG_DEBUG("----------------------- HIT\n");
                     create_new_frame = true;
                     bb_test_hit_last_test = bb_test_hit;
                 }
@@ -264,7 +270,7 @@ int main(int, char**)
                     // HIT -> NOT HIT
                     if (bb_test_hit_last_test)
                     {
-                        printf("---------------------------------HIT -> Not Hit\n");
+                        LOG_DEBUG("---------------------------------HIT -> Not Hit\n");
                         create_new_frame = true;
                     }
                     else // NOT HIT -> NOT HIT
@@ -276,7 +282,7 @@ int main(int, char**)
             }
             else
             {
-                printf("!!!!!!!!!!!!!!!!!!!!!!!!Unexpected error get mouse pos create_new_frame:%d\n", create_new_frame);
+                LOG_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!Unexpected error get mouse pos create_new_frame:%d\n", create_new_frame);
             }
         }
         else if (msg.message == 275) //WM_TIMER message, do not know why we get this message
@@ -288,15 +294,15 @@ int main(int, char**)
             // Mouse leve view port None-client area
             //674 		WM_NCMOUSELEAVE
             //257 		WM_KEYUP
-            printf("\t\t\tWM_TIMER(%d)  create_new_frame: %d\n", msg.message, create_new_frame);
+            LOG_DEBUG("\t\t\tWM_TIMER(%d)  create_new_frame: %d\n", msg.message, create_new_frame);
         }
         else if (msg.message == 15)
         {
-            printf("\t\t\t\tWM_PAINT(%d) create_new_frame: %d\n", msg.message, create_new_frame);
+            LOG_DEBUG("\t\t\t\tWM_PAINT(%d) create_new_frame: %d\n", msg.message, create_new_frame);
         }
         else
         {
-            printf("********* Unhandled MSG(%d), create_new_frame: %d\n", msg.message, create_new_frame);
+            LOG_DEBUG("********* Unhandled MSG(%d), create_new_frame: %d\n", msg.message, create_new_frame);
         }
 
         if (create_new_frame)
