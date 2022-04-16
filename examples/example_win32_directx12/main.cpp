@@ -367,7 +367,7 @@ int main(int, char**)
                     else
                         return ImColor(255,255,255,255);
                 };   
-                ImGui::TextColorfulUnfmt(text, NULL, color_callback, NULL);
+                ImGui::TextUnformatted(text, NULL, false, color_callback, NULL);
 
                 if (ImGui::Button("Close Me"))
                     show_another_window = false;

@@ -255,11 +255,6 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags,
     }
 }
 
-void ImGui::TextUnformatted(const char* text, const char* text_end)
-{
-    TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText);
-}
-
 void ImGui::Text(const char* fmt, ...)
 {
     va_list args;
@@ -298,9 +293,15 @@ void ImGui::TextColoredV(const ImVec4& col, const char* fmt, va_list args)
     PopStyleColor();
 }
 
-void ImGui::TextColorfulUnfmt(const char* text, const char* text_end, ImGuiTextColorCallback color_callback, void* cb_context)
+void ImGui::TextUnformatted(const char* text, const char* text_end, bool warpped, ImGuiTextColorCallback color_callback, void* cb_context)
 {
+    ImGuiContext& g = *GImGui;
+    bool need_backup = (g.CurrentWindow->DC.TextWrapPos < 0.0f);  // Keep existing wrap position if one is already set
+    if (need_backup && warpped)
+        PushTextWrapPos(0.0f);
     TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText, color_callback, cb_context);
+    if (need_backup && warpped)
+        PopTextWrapPos();
 }
 
 void ImGui::TextDisabled(const char* fmt, ...)
