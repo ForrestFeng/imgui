@@ -351,20 +351,23 @@ int main(int, char**)
                 // Demo the colorful text. We use hard coded index here, in practice, we can generate the index for a pattern or text with a grep like tool.
                 char* text = "Hello, Dear ImGui Colorfull Text";
                 //            0      7    12    18        28
-                auto color_callback =  [](const char* pos, const char* begin, const char* end, void* c) -> ImU32
+                auto color_callback =  [](const char* pos, const char* text, const char* text_end, void* cb_context) -> ImU32
                 {
-                    if (pos >= begin + 28)
+                    (void)text_end;//suppress warning
+                    (void)cb_context;//suppres warning
+
+                    if (pos >= text + 28)
                         return ImColor(0, 0, 255, 255);
-                    else if (pos >= begin + 18)
+                    else if (pos >= text + 18)
                         return ImColor(255, 255, 0, 255);
-                    else if (pos >= begin + 12)
+                    else if (pos >= text + 12)
                         return ImColor(0, 255, 0, 255);
-                    else if (pos >= begin + 7)
+                    else if (pos >= text + 7)
                         return ImColor(255, 0, 0, 255);
                     else
                         return ImColor(255,255,255,255);
                 };   
-                ImGui::TextColorful(text, NULL, color_callback, NULL);
+                ImGui::TextColorfulUnfmt(text, NULL, color_callback, NULL);
 
                 if (ImGui::Button("Close Me"))
                     show_another_window = false;

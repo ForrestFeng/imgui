@@ -298,7 +298,7 @@ void ImGui::TextColoredV(const ImVec4& col, const char* fmt, va_list args)
     PopStyleColor();
 }
 
-void ImGui::TextColorful(const char* text, const char* text_end, ImGuiTextColorCallback color_callback, void* cb_context)
+void ImGui::TextColorfulUnfmt(const char* text, const char* text_end, ImGuiTextColorCallback color_callback, void* cb_context)
 {
     TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText, color_callback, cb_context);
 }
