@@ -348,26 +348,62 @@ int main(int, char**)
                 ImGui::Text("Hello from another window!");
                 
 
+                static bool wrapped = false;
+                static bool disabled = false;
+                static bool underline = false;
+                static bool strikethrough = false;
+
+                ImGui::BeginGroup();
+                ImGui::Checkbox("Wrap", &wrapped);
+                ImGui::SameLine();
+                ImGui::Checkbox("Disabe", &disabled);
+                ImGui::SameLine();
+                ImGui::Checkbox("Underline", &underline);
+                ImGui::SameLine();
+                ImGui::Checkbox("Strikethrough", &strikethrough);
+                ImGui::EndGroup();
+
                 // Demo the colorful text. We use hard coded index here, in practice, we can generate the index for a pattern or text with a grep like tool.
-                char* text = "Hello, Dear ImGui Colorfull Text";
-                //            0      7    12    18        28
-                auto color_callback =  [](const char* pos, const char* text, const char* text_end, void* cb_context) -> ImU32
+                const static char* text = "Hello, Dear ImGui Colorfull Text. Underline text goes here. Strikethrough text goes here. It also supports the highlight text. "
+                    "Normal text goes here. Turn on/off Wrap, Disable, Underline and Strikethrough to see different styles in one line.";
+
+                auto style_callback =  [](const char* text, const char* text_end, void* cb_context) -> ImVector<ImTextCustomStyle>
                 {
                     (void)text_end;//suppress warning
                     (void)cb_context;//suppres warning
+     
+                    ImVector< ImTextCustomStyle> style;
+                    ImColor color, highlight;
 
-                    if (pos >= text + 28)
-                        return ImColor(0, 0, 255, 255);
-                    else if (pos >= text + 18)
-                        return ImColor(255, 255, 0, 255);
-                    else if (pos >= text + 12)
-                        return ImColor(0, 255, 0, 255);
-                    else if (pos >= text + 7)
-                        return ImColor(255, 0, 0, 255);
-                    else
-                        return ImColor(255,255,255,255);
-                };   
-                ImGui::TextUnformatted(text, NULL, false, color_callback, NULL);
+                    // colorfull text
+                    const char* p = strstr(text, "Dear"); color = ImColor(255, 0, 0, 255);
+                    style.push_back(ImTextCustomStyle(p,  p+strlen("Dear"), color, 0, underline, strikethrough));
+
+                    p = strstr(text, "ImGui"); color = ImColor(0, 255, 0, 255); 
+                    style.push_back(ImTextCustomStyle(p, p+strlen("ImGui"), color, 0, underline, strikethrough));
+
+                    p = strstr(text, "Colorfull"); color = ImColor(255, 255, 0, 255); 
+                    style.push_back(ImTextCustomStyle(p, p + strlen("Colorfull"), color, 0, underline, strikethrough));
+
+                    p = strstr(text, "Text."); color = ImColor(0, 0, 255, 255); 
+                    style.push_back(ImTextCustomStyle(p, p + strlen("Text"), color, 0, underline, strikethrough));
+
+
+                    // underline
+                    p = strstr(text, "Underline text goes here."); 
+                    style.push_back(ImTextCustomStyle(p, p + strlen("Underline text goes here."), 0, 0, underline, strikethrough));
+
+                    // strikethrough
+                    p = strstr(text, "Strikethrough text goes here."); 
+                    style.push_back(ImTextCustomStyle(p, p + strlen("Strikethrough text goes here."), 0, 0, underline, strikethrough));
+
+                    // highlight text
+                    p = strstr(text, "the highlight text"); highlight = ImColor(0, 255, 123, 255);
+                    style.push_back(ImTextCustomStyle(p, p + strlen("the highlight text"), 0, highlight, underline, strikethrough));
+               
+                    return style;
+                };
+                ImGui::TextUnformatted(text, NULL, wrapped, disabled, style_callback, NULL);
 
                 if (ImGui::Button("Close Me"))
                     show_another_window = false;

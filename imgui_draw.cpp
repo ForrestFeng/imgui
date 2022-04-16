@@ -1573,7 +1573,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, 0, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, ImGuiTextColorCallback color_callback, void* cb_context)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, ImGuiTextStyleCallback style_callback, void* cb_context)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1599,7 +1599,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, color_callback, cb_context);
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, style_callback, cb_context);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -3538,7 +3538,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, ImGuiTextColorCallback color_callback, void* cb_context) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, ImGuiTextStyleCallback style_callback, void* cb_context) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -3583,10 +3583,22 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     if (s == text_end)
         return;
 
+
     // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
     const int vtx_count_max = (int)(text_end - s) * 4;
     const int idx_count_max = (int)(text_end - s) * 6;
     const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
+
+    // TODO custom styles need reserve more
+    // Styles contain highlight fill rects (4 vtx, 6 idx), strikethrough and under lines for multi-ranges
+    // An algorism needed to calculate how mucth to reserve
+    ImVector<ImTextCustomStyle> custom_style;
+    if (style_callback)
+    {
+        custom_style = style_callback(text_begin, text_end, cb_context);
+    }
+
+
     draw_list->PrimReserve(idx_count_max, vtx_count_max);
 
     ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
@@ -3594,6 +3606,15 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
+
+    ImU32 text_col = col;
+    ImU32 highlight_col = 0; // 0 indicate no bg color
+  
+    // TODO draw underline and strikethrough
+    bool  underline = false;
+    bool  strikethrough = false;
+
+
 
     while (s < text_end)
     {
@@ -3625,6 +3646,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
         // Decode and advance source
         unsigned int c = (unsigned int)*s;
+        const char* pos_start = s; //backup it for customization style check
         if (c < 0x80)
         {
             s += 1;
@@ -3636,9 +3658,20 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 break;
         }
 
-        if (color_callback)
+        // set default value
+        col = text_col; highlight_col = 0; strikethrough = underline = false;
+        // check custom style
+        for (int style_n = 0; style_n < custom_style.Size; style_n++)
         {
-            col = color_callback(s, text_begin, text_end, cb_context);
+            ImTextCustomStyle &style = custom_style[style_n];
+            if (pos_start >= style.PosStart && pos_start < style.PosStop)
+            {
+                if (style.TextColor) col = style.TextColor;
+                if (style.HighlightColor) highlight_col = style.HighlightColor;
+                strikethrough = style.Strikethrough;
+                underline = style.Underline;
+                break; // first match win
+            }
         }
 
         if (c < 32)
@@ -3705,6 +3738,12 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     }
                 }
 
+                // TODO draw highlight rect glyph by glyph?
+                // Better to draw one rect over multi glyphs 
+                if (highlight_col)
+                {
+                }
+
                 // Support for untinted glyphs
                 ImU32 glyph_col = glyph->Colored ? col_untinted : col;
 
@@ -3720,6 +3759,21 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     vtx_current_idx += 4;
                     idx_write += 6;
                 }
+
+
+                // TODO draw strikethrough line glyph by glyph?
+                // Better to draw one strikethrough over multi glyphs 
+                if (strikethrough)
+                {
+                }
+
+                // TODO draw underline glyph by glyph?
+                // Better to draw one underline over multi glyphs 
+                if (underline)
+                {
+                }
+
+
             }
         }
         x += char_width;
@@ -3732,6 +3786,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     draw_list->_VtxWritePtr = vtx_write;
     draw_list->_IdxWritePtr = idx_write;
     draw_list->_VtxCurrentIdx = vtx_current_idx;
+
+
 }
 
 //-----------------------------------------------------------------------------

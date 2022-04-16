@@ -161,6 +161,7 @@ struct ImGuiTableColumnSortSpecs;   // Sorting specification for one column of a
 struct ImGuiTextBuffer;             // Helper to hold and append into a text buffer (~string builder)
 struct ImGuiTextFilter;             // Helper to parse and apply text filters (e.g. "aaaaa[,bbbbb][,ccccc]")
 struct ImGuiViewport;               // A Platform Window (always only one in 'master' branch), in the future may represent Platform Monitor
+struct ImTextCustomStyle;           // Customize text color with callback of ImGuiTextStyleCallback(). It specifies the style for the text in a specific range.
 
 // Enums/Flags (declared as int for compatibility with old C++, to allow using as flags without overhead, and to not pollute the top of this file)
 // - Tip: Use your programming IDE navigation facilities on the names in the _central column_ below to find the actual flags/enum lists!
@@ -243,7 +244,6 @@ typedef int     (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData* data);    
 typedef void    (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);              // Callback function for ImGui::SetNextWindowSizeConstraints()
 typedef void*   (*ImGuiMemAllocFunc)(size_t sz, void* user_data);               // Function signature for ImGui::SetAllocatorFunctions()
 typedef void    (*ImGuiMemFreeFunc)(void* ptr, void* user_data);                // Function signature for ImGui::SetAllocatorFunctions()
-typedef ImU32   (*ImGuiTextColorCallback)(const char* pos, const char* text_begin, const char* text_end, void* cb_context); // Callback function for ImGui::TextColorfull()
 
 // ImVec2: 2D vector used to store positions, sizes etc. [Compile-time configurable type]
 // This is a frequently used type in the API. Consider using IM_VEC2_CLASS_EXTRA to create implicit cast from/to our preferred type.
@@ -476,7 +476,6 @@ namespace ImGui
     IMGUI_API ImGuiID       GetID(const void* ptr_id);
 
     // Widgets: Text
-    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL, bool wrapped=false, ImGuiTextColorCallback color_callback = NULL, void* cb_context = NULL);// raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
     IMGUI_API void          Text(const char* fmt, ...)                                      IM_FMTARGS(1); // formatted text
     IMGUI_API void          TextV(const char* fmt, va_list args)                            IM_FMTLIST(1);
     IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...)            IM_FMTARGS(2); // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
@@ -2370,6 +2369,34 @@ struct ImColor
 };
 
 //-----------------------------------------------------------------------------
+// [SECTION] ImTextCustomStyle  definition
+//-----------------------------------------------------------------------------
+// Support text customization like text color, text background, croosline and underline
+
+struct ImTextCustomStyle
+{
+    const char* PosStart, * PosStop;
+    ImColor     TextColor, HighlightColor;
+    bool  Underline, Strikethrough;
+
+    // A zero color value will be ignored
+    ImTextCustomStyle() { PosStart = NULL; PosStop = NULL; TextColor = 0; HighlightColor = 0; Underline = false; Strikethrough = false; }
+    ImTextCustomStyle(const char* pos_start, const char* pos_stop, const ImColor text_col, ImColor highlight_col=0, bool underline = false, bool strikethrough = false)
+    {
+        PosStart = pos_start; PosStop = pos_stop; TextColor = text_col; HighlightColor = highlight_col; Underline = underline; Strikethrough = strikethrough;
+    }
+};
+
+// Support text customization like text color, text background, croos line and under line
+typedef ImVector<ImTextCustomStyle> (*ImGuiTextStyleCallback)(const char* text_begin, const char* text_end, void* cb_context); // Callback function for ImGui::TextUnformatted()
+
+
+namespace ImGui
+{
+    // Widgets: Text
+    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL, bool wrapped = false, bool disabled = false, ImGuiTextStyleCallback style_callback = NULL, void* cb_context = NULL);// raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
+}
+//-----------------------------------------------------------------------------
 // [SECTION] Drawing API (ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawListFlags, ImDrawList, ImDrawData)
 // Hold a series of drawing commands. The user provides a renderer for ImDrawData which essentially contains an array of ImDrawList.
 //-----------------------------------------------------------------------------
@@ -2558,7 +2585,7 @@ struct ImDrawList
     IMGUI_API void  AddNgon(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness = 1.0f);
     IMGUI_API void  AddNgonFilled(const ImVec2& center, float radius, ImU32 col, int num_segments);
     IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL);
-    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL,ImGuiTextColorCallback color_callback = NULL, void* cb_context = NULL);
+    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL,ImGuiTextStyleCallback style_callback = NULL, void* cb_context = NULL);
     IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col); // Note: Anti-aliased filling requires points to be in clockwise order.
     IMGUI_API void  AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments = 0); // Cubic Bezier (4 control points)
@@ -2888,7 +2915,7 @@ struct ImFont
     IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
     IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, ImWchar c) const;
-    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false, ImGuiTextColorCallback color_callback = NULL, void* cb_context = NULL) const;
+    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false, ImGuiTextStyleCallback style_callback = NULL, void* cb_context = NULL) const;
 
     // [Internal] Don't use!
     IMGUI_API void              BuildLookupTable();

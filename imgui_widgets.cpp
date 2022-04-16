@@ -148,7 +148,7 @@ static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const 
 // - BulletTextV()
 //-------------------------------------------------------------------------
 
-void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags, ImGuiTextColorCallback color_callback, void* cb_context)
+void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags, ImGuiTextStyleCallback style_callback, void* cb_context)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -213,7 +213,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags,
                 if (!line_end)
                     line_end = text_end;
                 text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
-                RenderText(pos, line, line_end, false, color_callback, cb_context);
+                RenderText(pos, line, line_end, false, style_callback, cb_context);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
                 line_rect.Max.y += line_height;
@@ -251,7 +251,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags,
             return;
 
         // Render (we don't hide text after ## in this end-user function)
-        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width, color_callback, cb_context);
+        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width, style_callback, cb_context);
     }
 }
 
@@ -293,13 +293,17 @@ void ImGui::TextColoredV(const ImVec4& col, const char* fmt, va_list args)
     PopStyleColor();
 }
 
-void ImGui::TextUnformatted(const char* text, const char* text_end, bool warpped, ImGuiTextColorCallback color_callback, void* cb_context)
+void ImGui::TextUnformatted(const char* text, const char* text_end, bool warpped, bool disabled, ImGuiTextStyleCallback style_callback, void* cb_context)
 {
     ImGuiContext& g = *GImGui;
     bool need_backup = (g.CurrentWindow->DC.TextWrapPos < 0.0f);  // Keep existing wrap position if one is already set
     if (need_backup && warpped)
         PushTextWrapPos(0.0f);
-    TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText, color_callback, cb_context);
+    if (disabled)
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
+    TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText, style_callback, cb_context);
+    if (disabled)
+        PopStyleColor();
     if (need_backup && warpped)
         PopTextWrapPos();
 }
