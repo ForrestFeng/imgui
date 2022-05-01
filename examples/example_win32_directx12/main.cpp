@@ -40,17 +40,17 @@ static FrameContext                 g_frameContext[NUM_FRAMES_IN_FLIGHT] = {};
 static UINT                         g_frameIndex = 0;
 
 static int const                    NUM_BACK_BUFFERS = 3;
-static ID3D12Device*                g_pd3dDevice = NULL;
-static ID3D12DescriptorHeap*        g_pd3dRtvDescHeap = NULL;
-static ID3D12DescriptorHeap*        g_pd3dSrvDescHeap = NULL;
-static ID3D12CommandQueue*          g_pd3dCommandQueue = NULL;
-static ID3D12GraphicsCommandList*   g_pd3dCommandList = NULL;
-static ID3D12Fence*                 g_fence = NULL;
+static ID3D12Device* g_pd3dDevice = NULL;
+static ID3D12DescriptorHeap* g_pd3dRtvDescHeap = NULL;
+static ID3D12DescriptorHeap* g_pd3dSrvDescHeap = NULL;
+static ID3D12CommandQueue* g_pd3dCommandQueue = NULL;
+static ID3D12GraphicsCommandList* g_pd3dCommandList = NULL;
+static ID3D12Fence* g_fence = NULL;
 static HANDLE                       g_fenceEvent = NULL;
 static UINT64                       g_fenceLastSignaledValue = 0;
-static IDXGISwapChain3*             g_pSwapChain = NULL;
+static IDXGISwapChain3* g_pSwapChain = NULL;
 static HANDLE                       g_hSwapChainWaitableObject = NULL;
-static ID3D12Resource*              g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
+static ID3D12Resource* g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[NUM_BACK_BUFFERS] = {};
 
 // Forward declarations of helper functions
@@ -121,6 +121,9 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
+    ImFont* font = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\simsunb.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+    IM_ASSERT(font != nullptr);
+
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
@@ -172,7 +175,7 @@ int main(int, char**)
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        
+
         // original code
         //bool WantCaptureMouse = (mouse_avail && (g.HoveredWindow != NULL || mouse_any_down)) || has_open_popup;
         const bool has_open_popup = (g.OpenPopupStack.Size > 0);
@@ -185,7 +188,7 @@ int main(int, char**)
         if (has_open_popup || mouse_any_down)// || io.WantCaptureKeyboard)
         {
             LOG_DEBUG("^^^^^^^^^^^^^^^^^Mouse down or has popup\n")
-            create_new_frame = true;
+                create_new_frame = true;
         }
         else if (msg.message == 512)//mouse move
         {
@@ -198,7 +201,7 @@ int main(int, char**)
                 mouse_pos.y = (float)pos.y;
 
                 // hit test in the order of from front to back
-                for (int i = g.WindowsFocusOrder.Size-1; i > -1; i--)
+                for (int i = g.WindowsFocusOrder.Size - 1; i > -1; i--)
                 {
                     if (bb_test_hit) break;
 
@@ -233,14 +236,14 @@ int main(int, char**)
                     {
                         continue;
                     }
-                    else if(!bb_exc_padding.Contains(mouse_pos)) // mouse is hovering on the edge of the mouse
-                    { 
+                    else if (!bb_exc_padding.Contains(mouse_pos)) // mouse is hovering on the edge of the mouse
+                    {
                         bb_test_hit = true;
                         break;
                     }
 
                     // then hit test of rects in the window (clapsed window only has two or a few rects to test for clopase icon and close icon)
-                    LOG_DEBUG("Windows do hit test: %s\n", window->Name);                    
+                    LOG_DEBUG("Windows do hit test: %s\n", window->Name);
                     for (int j = 0; j != window->HitTestRects.Size; j++)
                     {
                         ImRect bb = window->HitTestRects[j];
@@ -275,7 +278,7 @@ int main(int, char**)
                     }
                     else // NOT HIT -> NOT HIT
                     {
-                        create_new_frame = false;                     
+                        create_new_frame = false;
                     }
                     bb_test_hit_last_test = bb_test_hit;
                 }
@@ -341,12 +344,67 @@ int main(int, char**)
                 ImGui::End();
             }
 
+            // demo the scroo to desigered position with clipper
+            {
+             // The good thing is that it has no performance penalty with large amout of items to display.
+             // https://github.com/ocornut/imgui/issues/3073
+
+                static bool useClipper = false;
+                static int target = -1;
+                static float item_height = -1;
+
+                ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
+                ImGui::SetNextWindowSize(ImVec2(400, 1000));
+                ImGui::Begin("clipper test");
+                if (ImGui::Button("10")) target = 10;
+                ImGui::SameLine();
+                if (ImGui::Button("100")) target = 100;
+                ImGui::SameLine();
+                if (ImGui::Button("1000")) target = 1000;
+                ImGui::TextUnformatted("bleble");
+                ImGui::BeginChild("##cliptest", ImVec2(0, 0), true);
+
+                if (target >= 0 && item_height > 0)
+                {
+                    if (true)
+                    {
+                        // let item appear at the top
+                        ImGui::SetScrollY(item_height * target);
+                        target = -1;
+                    }
+                    else
+                    {
+                        // let item appear at the middle
+                        float h = ImGui::GetCurrentContext()->CurrentWindow->InnerRect.GetSize().y;
+                        int cnt = (int)(h / item_height); // lines can be seen for the item in the child window
+                        ImGui::SetScrollY(item_height * ImMax(0, (target - cnt / 2)));
+                        target = -1;
+                    }
+                }
+
+                ImGuiListClipper clipper(2000);
+                while (clipper.Step())
+                {
+                    for (auto i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                    {
+                        ImGui::Text("%i", i);
+                    }
+                    if (clipper.ItemsHeight > 0)
+                    {
+                        item_height = clipper.ItemsHeight;
+                    }
+
+                }
+
+                ImGui::EndChild();
+                ImGui::End();
+            }
             // 3. Show another simple window.
             if (show_another_window)
             {
                 ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
                 ImGui::Text("Hello from another window!");
-                
+
 
                 static bool wrapped = false;
                 static bool disabled = false;
@@ -367,40 +425,40 @@ int main(int, char**)
                 const static char* text = "Hello, Dear ImGui Colorfull Text. Underline text goes here. Strikethrough text goes here. It also supports the highlight text. "
                     "Normal text goes here. Turn on/off Wrap, Disable, Underline and Strikethrough to see different styles in one line.";
 
-                auto style_callback =  [](const char* text, const char* text_end, void* cb_context) -> ImVector<ImTextCustomStyle>
+                auto style_callback = [](const char* text, const char* text_end, void* cb_context) -> ImVector<ImTextCustomStyle>
                 {
                     (void)text_end;//suppress warning
                     (void)cb_context;//suppres warning
-     
+
                     ImVector< ImTextCustomStyle> style;
                     ImColor color, highlight;
 
                     // colorfull text
                     const char* p = strstr(text, "Dear"); color = ImColor(255, 0, 0, 255);
-                    style.push_back(ImTextCustomStyle(p,  p+strlen("Dear"), color, 0, underline, strikethrough));
+                    style.push_back(ImTextCustomStyle(p, p + strlen("Dear"), color, 0, underline, strikethrough));
 
-                    p = strstr(text, "ImGui"); color = ImColor(0, 255, 0, 255); 
-                    style.push_back(ImTextCustomStyle(p, p+strlen("ImGui"), color, 0, underline, strikethrough));
+                    p = strstr(text, "ImGui"); color = ImColor(0, 255, 0, 255);
+                    style.push_back(ImTextCustomStyle(p, p + strlen("ImGui"), color, 0, underline, strikethrough));
 
-                    p = strstr(text, "Colorfull"); color = ImColor(255, 255, 0, 255); 
+                    p = strstr(text, "Colorfull"); color = ImColor(255, 255, 0, 255);
                     style.push_back(ImTextCustomStyle(p, p + strlen("Colorfull"), color, 0, underline, strikethrough));
 
-                    p = strstr(text, "Text."); color = ImColor(0, 0, 255, 255); 
+                    p = strstr(text, "Text."); color = ImColor(0, 0, 255, 255);
                     style.push_back(ImTextCustomStyle(p, p + strlen("Text"), color, 0, underline, strikethrough));
 
 
                     // underline
-                    p = strstr(text, "Underline text goes here."); 
+                    p = strstr(text, "Underline text goes here.");
                     style.push_back(ImTextCustomStyle(p, p + strlen("Underline text goes here."), 0, 0, underline, strikethrough));
 
                     // strikethrough
-                    p = strstr(text, "Strikethrough text goes here."); 
+                    p = strstr(text, "Strikethrough text goes here.");
                     style.push_back(ImTextCustomStyle(p, p + strlen("Strikethrough text goes here."), 0, 0, underline, strikethrough));
 
                     // highlight text
                     p = strstr(text, "the highlight text"); highlight = ImColor(0, 255, 123, 255);
                     style.push_back(ImTextCustomStyle(p, p + strlen("the highlight text"), 0, highlight, underline, strikethrough));
-               
+
                     return style;
                 };
                 ImGui::TextUnformatted(text, NULL, wrapped, disabled, style_callback, NULL);
@@ -450,40 +508,40 @@ int main(int, char**)
         }
         else
         {
-        //    FrameContext* frameCtx = WaitForNextFrameResources();
-        //    UINT backBufferIdx = g_pSwapChain->GetCurrentBackBufferIndex();
-        //    frameCtx->CommandAllocator->Reset();
+            //    FrameContext* frameCtx = WaitForNextFrameResources();
+            //    UINT backBufferIdx = g_pSwapChain->GetCurrentBackBufferIndex();
+            //    frameCtx->CommandAllocator->Reset();
 
-        //    D3D12_RESOURCE_BARRIER barrier = {};
-        //    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        //    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        //    barrier.Transition.pResource = g_mainRenderTargetResource[backBufferIdx];
-        //    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        //    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-        //    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        //    g_pd3dCommandList->Reset(frameCtx->CommandAllocator, NULL);
-        //    g_pd3dCommandList->ResourceBarrier(1, &barrier);
+            //    D3D12_RESOURCE_BARRIER barrier = {};
+            //    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            //    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            //    barrier.Transition.pResource = g_mainRenderTargetResource[backBufferIdx];
+            //    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            //    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+            //    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            //    g_pd3dCommandList->Reset(frameCtx->CommandAllocator, NULL);
+            //    g_pd3dCommandList->ResourceBarrier(1, &barrier);
 
-        //    // Render Dear ImGui graphics
-        //    const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-        //    g_pd3dCommandList->ClearRenderTargetView(g_mainRenderTargetDescriptor[backBufferIdx], clear_color_with_alpha, 0, NULL);
-        //    g_pd3dCommandList->OMSetRenderTargets(1, &g_mainRenderTargetDescriptor[backBufferIdx], FALSE, NULL);
-        //    g_pd3dCommandList->SetDescriptorHeaps(1, &g_pd3dSrvDescHeap);
-        //    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), g_pd3dCommandList);
-        //    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        //    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-        //    g_pd3dCommandList->ResourceBarrier(1, &barrier);
-        //    g_pd3dCommandList->Close();
+            //    // Render Dear ImGui graphics
+            //    const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
+            //    g_pd3dCommandList->ClearRenderTargetView(g_mainRenderTargetDescriptor[backBufferIdx], clear_color_with_alpha, 0, NULL);
+            //    g_pd3dCommandList->OMSetRenderTargets(1, &g_mainRenderTargetDescriptor[backBufferIdx], FALSE, NULL);
+            //    g_pd3dCommandList->SetDescriptorHeaps(1, &g_pd3dSrvDescHeap);
+            //    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), g_pd3dCommandList);
+            //    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            //    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+            //    g_pd3dCommandList->ResourceBarrier(1, &barrier);
+            //    g_pd3dCommandList->Close();
 
-        //    g_pd3dCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&g_pd3dCommandList);
+            //    g_pd3dCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&g_pd3dCommandList);
 
-        //    g_pSwapChain->Present(1, 0); // Present with vsync
-        //    //g_pSwapChain->Present(0, 0); // Present without vsync
+            //    g_pSwapChain->Present(1, 0); // Present with vsync
+            //    //g_pSwapChain->Present(0, 0); // Present without vsync
 
-        //    UINT64 fenceValue = g_fenceLastSignaledValue + 1;
-        //    g_pd3dCommandQueue->Signal(g_fence, fenceValue);
-        //    g_fenceLastSignaledValue = fenceValue;
-        //    frameCtx->FenceValue = fenceValue;
+            //    UINT64 fenceValue = g_fenceLastSignaledValue + 1;
+            //    g_pd3dCommandQueue->Signal(g_fence, fenceValue);
+            //    g_fenceLastSignaledValue = fenceValue;
+            //    frameCtx->FenceValue = fenceValue;
         }
 
         create_new_frame = true;
