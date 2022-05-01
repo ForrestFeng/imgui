@@ -964,6 +964,77 @@ static void ShowDemoWindowWidgets()
             ImGui::TreePop();
         }
 
+        IMGUI_DEMO_MARKER("Widgets/Text/Word Color, Highlight, Underline, Etc.");
+        if (ImGui::TreeNode("Word with  Color, Highlight, Underline Etc."))
+        {
+            static bool wrapped = false;
+            static bool disabled = false;
+            static bool underline = false;
+            static bool strikethrough = false;
+
+            ImGui::BeginGroup();
+            ImGui::Checkbox("Wrap", &wrapped);
+            ImGui::SameLine();
+            ImGui::Checkbox("Disabe", &disabled);
+            ImGui::SameLine();
+            ImGui::Checkbox("Underline", &underline);
+            ImGui::SameLine();
+            ImGui::Checkbox("Strikethrough", &strikethrough);
+            ImGui::EndGroup();
+
+            // Demo the colorful text. In practice, we can generate the index for a pattern or text with a grep like tool.
+            const static char* text = "Hello, Dear ImGui Colorfull Text. Underline text goes \r\n\r\nhere. Strikethrough text goes here. It also supports the highlight text. "
+                "Normal text goes here. Turn on/off Wrap, Disable, Underline and Strikethrough to see different styles in one line.";
+
+            auto style_callback = [](const char* text, const char* text_end, void* cb_context) -> ImVector<ImTextCustomStyle>
+            {
+                (void)text_end;//suppress warning
+                (void)cb_context;//suppres warning
+
+                ImVector< ImTextCustomStyle> style;
+                ImColor color, highlight;
+
+                // colorfull text
+                const char* p = strstr(text, "Dear"); color = ImColor(255, 0, 0, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("Dear")).SetTextColor(color));
+
+                p = strstr(text, "ImGui"); color = ImColor(0, 255, 0, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("ImGui")).SetTextColor(color));
+
+                p = strstr(text, "Colorfull"); color = ImColor(255, 255, 0, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("Colorfull")).SetTextColor(color));
+
+                p = strstr(text, "Text."); color = ImColor(0, 0, 255, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("Text")).SetTextColor(color));
+
+                // underline with different color
+                if (underline)
+                {
+                    p = strstr(text, "olorfu");
+                    style.push_back(ImTextCustomStyle(p, p + strlen("olorfu")).SetUnerline(ImColor(0, 255, 0, 255)));
+
+                    p = strstr(text, "Underline text goes \r\n\r\nhere");
+                    style.push_back(ImTextCustomStyle(p, p + strlen("Underline text goes \r\n\r\nhere")).SetUnerline());
+                }
+
+                if (strikethrough)
+                {
+                    p = strstr(text, "Strikethrough text goes here");
+                    style.push_back(ImTextCustomStyle(p, p + strlen("Strikethrough text goes here")).SetStrkethrough(strikethrough));
+                }
+
+                // highlight text
+                p = strstr(text, "the highlight text"); highlight = ImColor(0, 255, 123, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("the highlight text")).SetHighlight(highlight));
+
+                return style;
+            };
+            ImGui::TextUnformatted(text, NULL, wrapped, disabled, style_callback, NULL);
+
+          
+            ImGui::TreePop();
+        }
+
         IMGUI_DEMO_MARKER("Widgets/Text/UTF-8 Text");
         if (ImGui::TreeNode("UTF-8 Text"))
         {
