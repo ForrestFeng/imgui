@@ -3584,10 +3584,39 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     if (s == text_end)
         return;
 
+    // draw_list_text 
+    ImDrawList* draw_list_text = nullptr;
+
+
+    ImDrawList _draw_list_text(ImGui::GetDrawListSharedData());
+
+    // Create a dedicated draw list for text. The reson is that the highlight texts must draw before the text.
+    // The highlight texts is genrated during the glyph drawing process.
+    if (style_callback)
+    {
+        draw_list_text = &_draw_list_text;
+        draw_list_text->AddDrawCmd();
+    }
+    else
+    {
+        draw_list_text = draw_list;
+    }
+    
     // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
-    const int vtx_count_max = (int)(text_end - s) * 4;
-    const int idx_count_max = (int)(text_end - s) * 6;
-    const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
+    const int vtx_count_max = (int)(text_end - text_begin) * 4;
+    const int idx_count_max = (int)(text_end - text_begin) * 6;
+    const int idx_expected_size = draw_list_text->IdxBuffer.Size + idx_count_max;
+
+    // Reserve for text
+    draw_list_text->PrimReserve(idx_count_max, vtx_count_max);
+
+    ImDrawVert* vtx_write = draw_list_text->_VtxWritePtr;
+    ImDrawIdx* idx_write = draw_list_text->_IdxWritePtr;
+    unsigned int vtx_current_idx = draw_list_text->_VtxCurrentIdx;
+
+
+
+    const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
 
     // TODO custom styles need reserve more
     // Styles contain highlight fill rects (4 vtx, 6 idx), strikethrough and under lines for multi-ranges
@@ -3606,17 +3635,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     ImVector<PosPair> underline_segments;
     ImVector<PosPair> strikethrough_segments;
     ImVector<PosPair> highlight_segments;
-
-    draw_list->PrimReserve(idx_count_max, vtx_count_max);
-
-    ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
-    ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
-    unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
-
-    const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
-
-
-
     // cache of the text col, as a default color of underline or strikethrough
     ImU32 text_col = col;
     // cache of x, y for last glyph position before new line 
@@ -3720,86 +3738,88 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 continue;
         }
 
-        // check custom style
-        // NOTE: For overlapped ranges, the last style win.
-        bool underline = false;
-        bool strikethrough = false;
-        bool highlight = false;
-        ImU32 underline_color;
-        ImU32 strikethrough_color;
-        ImU32 highlight_color;
-        for (int style_n = 0; style_n < custom_style.Size; style_n++)
+        // highlight, underline, strikethrough handling logic
         {
-            ImTextCustomStyle &style = custom_style[style_n];
-            if (pos_start >= style.PosStart && pos_start < style.PosStop)
+            // check custom style
+            // NOTE: For overlapped ranges, the last style win.
+            bool underline = false;
+            bool strikethrough = false;
+            bool highlight = false;
+            ImU32 underline_color;
+            ImU32 strikethrough_color;
+            ImU32 highlight_color;
+            for (int style_n = 0; style_n < custom_style.Size; style_n++)
             {
+                ImTextCustomStyle& style = custom_style[style_n];
+                if (pos_start >= style.PosStart && pos_start < style.PosStop)
+                {
 
-                if (style.Mask & ImTextCustomStyle::FLAG::TEXT_COLOR)
-                {
-                    col = style.TextColor;
-                }
-                if (style.Mask & ImTextCustomStyle::FLAG::HIGHLIGHT_COLR)
-                {
-                    highlight = true;
-                    highlight_color = style.HighlightColor;
-                }
-                if (style.Mask & ImTextCustomStyle::FLAG::STRIKE_THROUGH)
-                {
-                    strikethrough = true;
-                    strikethrough_color = style.StrikethroughColor;
-                }
-                if (style.Mask & ImTextCustomStyle::FLAG::UNDER_LINE)
-                {
-                    underline = true;
-                    underline_color = style.UnderlineColor;
+                    if (style.Mask & ImTextCustomStyle::FLAG::TEXT_COLOR)
+                    {
+                        col = style.TextColor;
+                    }
+                    if (style.Mask & ImTextCustomStyle::FLAG::HIGHLIGHT_COLR)
+                    {
+                        highlight = true;
+                        highlight_color = style.HighlightColor;
+                    }
+                    if (style.Mask & ImTextCustomStyle::FLAG::STRIKE_THROUGH)
+                    {
+                        strikethrough = true;
+                        strikethrough_color = style.StrikethroughColor;
+                    }
+                    if (style.Mask & ImTextCustomStyle::FLAG::UNDER_LINE)
+                    {
+                        underline = true;
+                        underline_color = style.UnderlineColor;
+                    }
                 }
             }
-        }
-        last_style_underline = style_underline;
-        style_underline = underline;
-        last_style_strikethrough = style_strikethrough;
-        style_strikethrough = strikethrough;
-        last_style_highlight = style_highlight;
-        style_highlight = highlight;
+            last_style_underline = style_underline;
+            style_underline = underline;
+            last_style_strikethrough = style_strikethrough;
+            style_strikethrough = strikethrough;
+            last_style_highlight = style_highlight;
+            style_highlight = highlight;
 
 
-        // draw highlight, each highlight segment can cover one or more glyphs
-        float highlight_offset_y = line_height;
-        if (style_highlight && !last_style_highlight) // highlight begin
-        {
-            if (highlight_color == 0) highlight_color = text_col;
-            highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
-            // highlight begins from a new line
-            if (new_line) new_line = false;
-        }
-        else if (last_style_highlight && style_highlight) // highlight goes on
-        {
-            // handle new line caused by word wrap or \n
-            if (new_line > 0)
+            // draw highlight, each highlight segment can cover one or more glyphs
+            float highlight_offset_y = line_height;
+            if (style_highlight && !last_style_highlight) // highlight begin
             {
-                // need end the segment with point we saved before new line starting
-                highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
-                // start a new segment with current point
                 if (highlight_color == 0) highlight_color = text_col;
                 highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
-                new_line = 0;
+                // highlight begins from a new line
+                if (new_line) new_line = false;
             }
-        }
-        else if (!style_highlight && last_style_highlight && highlight_segments.Size > 0) // highlight end
-        {
-            IM_ASSERT_USER_ERROR(highlight_segments.back().EndPos.x == FLT_MAX && highlight_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
-            // special case, the highlight segment ended and with new line(word wrap or one or more \n) follwed
-            if (new_line > 0)
+            else if (last_style_highlight && style_highlight) // highlight goes on
             {
-                highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
-                new_line = 0;
+                // handle new line caused by word wrap or \n
+                if (new_line > 0)
+                {
+                    // need end the segment with point we saved before new line starting
+                    highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
+                    // start a new segment with current point
+                    if (highlight_color == 0) highlight_color = text_col;
+                    highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
+                    new_line = 0;
+                }
             }
-            // normal case, the highlight segment ended withou new line followed
-            else
+            else if (!style_highlight && last_style_highlight && highlight_segments.Size > 0) // highlight end
             {
-                highlight_segments.back().EndPos = ImVec2(x, y + highlight_offset_y);
+                IM_ASSERT_USER_ERROR(highlight_segments.back().EndPos.x == FLT_MAX && highlight_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
+                // special case, the highlight segment ended and with new line(word wrap or one or more \n) follwed
+                if (new_line > 0)
+                {
+                    highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
+                    new_line = 0;
+                }
+                // normal case, the highlight segment ended withou new line followed
+                else
+                {
+                    highlight_segments.back().EndPos = ImVec2(x, y + highlight_offset_y);
+                }
             }
-        }
 
 
 
@@ -3808,11 +3828,11 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             if (style_underline && !last_style_underline) // underline begin
             {
                 if (underline_color == 0) underline_color = text_col;
-                underline_segments.push_back({ ImVec2(x, y + underline_offset_y), ImVec2(FLT_MAX, FLT_MAX), underline_color});
+                underline_segments.push_back({ ImVec2(x, y + underline_offset_y), ImVec2(FLT_MAX, FLT_MAX), underline_color });
                 // underline begins from a new line
                 if (new_line) new_line = false;
             }
-            else if(last_style_underline && style_underline) // underline goes on
+            else if (last_style_underline && style_underline) // underline goes on
             {
                 // handle new line caused by word wrap or \n
                 if (new_line > 0)
@@ -3821,7 +3841,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     underline_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + underline_offset_y);
                     // start a new segment with current point
                     if (underline_color == 0) underline_color = text_col;
-                    underline_segments.push_back({ ImVec2(x, y + underline_offset_y), ImVec2(FLT_MAX, FLT_MAX), underline_color});
+                    underline_segments.push_back({ ImVec2(x, y + underline_offset_y), ImVec2(FLT_MAX, FLT_MAX), underline_color });
                     new_line = 0;
                 }
             }
@@ -3835,7 +3855,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     new_line = 0;
                 }
                 // normal case, the underline segment ended withou new line followed
-                else 
+                else
                 {
                     underline_segments.back().EndPos = ImVec2(x, y + underline_offset_y);
                 }
@@ -3843,7 +3863,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
 
             // draw strikethrough, each strikethrough segment can cover one or more glyphs
-            float strikethrough_offset_y = (line_height / 2);
+            // Reference to word process SW, the strke y position is about 59% line_height down.
+            float strikethrough_offset_y = (line_height * 59.f / 100.f);
             if (style_strikethrough && !last_style_strikethrough) // strikethrough begin
             {
                 if (strikethrough_color == 0) strikethrough_color = text_col;
@@ -3879,6 +3900,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     strikethrough_segments.back().EndPos = ImVec2(x, y + strikethrough_offset_y);
                 }
             }
+        }
 
         const ImFontGlyph* glyph = FindGlyph((ImWchar)c);
         if (glyph == NULL)
@@ -3950,43 +3972,65 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         x += char_width;
     }
 
-    // Draw the highlight firt because it's the backgroud of the text
-    for (int i = 0; i < highlight_segments.Size; i++)
-    {
-        ImVec2 begin = highlight_segments[i].BeginPos;
-        ImVec2 end = highlight_segments[i].EndPos;
-        ImColor color = highlight_segments[i].Color;
-        draw_list->AddRectFilled(begin, end, color);
-    }
-
-
     // Give back unused vertices (clipped ones, blanks) ~ this is essentially a PrimUnreserve() action.
-    draw_list->VtxBuffer.Size = (int)(vtx_write - draw_list->VtxBuffer.Data); // Same as calling shrink()
-    draw_list->IdxBuffer.Size = (int)(idx_write - draw_list->IdxBuffer.Data);
-    draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
-    draw_list->_VtxWritePtr = vtx_write;
-    draw_list->_IdxWritePtr = idx_write;
-    draw_list->_VtxCurrentIdx = vtx_current_idx;
+    draw_list_text->VtxBuffer.Size = (int)(vtx_write - draw_list_text->VtxBuffer.Data); // Same as calling shrink()
+    draw_list_text->IdxBuffer.Size = (int)(idx_write - draw_list_text->IdxBuffer.Data);
+    draw_list_text->CmdBuffer[draw_list_text->CmdBuffer.Size - 1].ElemCount -= (idx_expected_size - draw_list_text->IdxBuffer.Size);
+    draw_list_text->_VtxWritePtr = vtx_write;
+    draw_list_text->_IdxWritePtr = idx_write;
+    draw_list_text->_VtxCurrentIdx = vtx_current_idx;
 
 
-
-
-    // Draw the underlines
-    for (int i = 0; i < underline_segments.Size; i++)
+    if (style_callback)
     {
-        ImVec2 begin = underline_segments[i].BeginPos;
-        ImVec2 end = underline_segments[i].EndPos;
-        ImColor color = underline_segments[i].Color;
-        draw_list->AddLine(begin, end, color);
-    }
+        // Draw the highlight firt because it's the backgroud of the text
+        for (int i = 0; i < highlight_segments.Size; i++)
+        {
+            ImVec2 begin = highlight_segments[i].BeginPos;
+            ImVec2 end = highlight_segments[i].EndPos;
+            ImColor color = highlight_segments[i].Color;
+            draw_list->AddRectFilled(begin, end, color);
+        }
 
-    // Draw the strikethrough lines
-    for (int i = 0; i < strikethrough_segments.Size; i++)
-    {
-        ImVec2 begin = strikethrough_segments[i].BeginPos;
-        ImVec2 end = strikethrough_segments[i].EndPos;
-        ImColor color = strikethrough_segments[i].Color;
-        draw_list->AddLine(begin, end, color);
+        // Append draw_list_text to the main draw_lists
+        {
+            unsigned int old_inx_buffer_sz = draw_list->IdxBuffer.Size;
+            unsigned int old_vtx_buffer_sz = draw_list->VtxBuffer.Size;
+            draw_list->PrimReserve(draw_list_text->IdxBuffer.Size, draw_list_text->VtxBuffer.Size);
+            // draw_list_text->VtxBuffer buffer can be memcopied, it contains no relative data
+            memcpy(draw_list->_VtxWritePtr, draw_list_text->VtxBuffer.Data, draw_list_text->VtxBuffer.Size * sizeof(ImDrawVert));
+            // draw_list_text->IdxBuffer buffer cann't because the index value in the IdxBuffer points to draw_list_text->VtxBuffer. It need aligned to draw_list->VtxBuffer.
+            for (int i = 0; i < draw_list_text->IdxBuffer.Size; i++)
+            {
+                draw_list->IdxBuffer[old_inx_buffer_sz + i] = old_vtx_buffer_sz + draw_list_text->IdxBuffer[i];
+            }
+            draw_list->_VtxWritePtr += draw_list_text->VtxBuffer.Size;
+            draw_list->_IdxWritePtr += draw_list_text->IdxBuffer.Size;
+            draw_list->_VtxCurrentIdx += vtx_current_idx;
+        }
+
+
+        // Draw the underlines
+        for (int i = 0; i < underline_segments.Size; i++)
+        {
+            ImVec2 begin = underline_segments[i].BeginPos;
+            ImVec2 end = underline_segments[i].EndPos;
+            ImColor color = underline_segments[i].Color;
+            // The underlines is about 6.5% line height
+            float thickness = ceill(ImMax<float>(1.0f, line_height * 6.5 / 100));
+            draw_list->AddLine(begin, end, color, thickness);
+        }
+
+        // Draw the strikethrough lines
+        for (int i = 0; i < strikethrough_segments.Size; i++)
+        {
+            ImVec2 begin = strikethrough_segments[i].BeginPos;
+            ImVec2 end = strikethrough_segments[i].EndPos;
+            ImColor color = strikethrough_segments[i].Color;
+            // The strkethrough is about 4.5% line height
+            float thickness = ceill(ImMax<float>(1.0f, line_height * 4.5 / 100));
+            draw_list->AddLine(begin, end, color, thickness);
+        }
     }
 }
 
