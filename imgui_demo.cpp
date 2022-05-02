@@ -969,6 +969,7 @@ static void ShowDemoWindowWidgets()
         {
             static bool wrapped = false;
             static bool disabled = false;
+            static bool highlight = false;
             static bool underline = false;
             static bool strikethrough = false;
 
@@ -976,6 +977,8 @@ static void ShowDemoWindowWidgets()
             ImGui::Checkbox("Wrap", &wrapped);
             ImGui::SameLine();
             ImGui::Checkbox("Disabe", &disabled);
+            ImGui::SameLine();
+            ImGui::Checkbox("Highlight", &highlight);
             ImGui::SameLine();
             ImGui::Checkbox("Underline", &underline);
             ImGui::SameLine();
@@ -992,20 +995,20 @@ static void ShowDemoWindowWidgets()
                 (void)cb_context;//suppres warning
 
                 ImVector< ImTextCustomStyle> style;
-                ImColor color, highlight;
+                ImColor text_color, highlight_col;
 
                 // colorfull text
-                const char* p = strstr(text, "Dear"); color = ImColor(255, 0, 0, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("Dear")).SetTextColor(color));
+                const char* p = strstr(text, "Dear"); text_color = ImColor(255, 0, 0, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("Dear")).SetTextColor(text_color));
 
-                p = strstr(text, "ImGui"); color = ImColor(0, 255, 0, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("ImGui")).SetTextColor(color));
+                p = strstr(text, "ImGui"); text_color = ImColor(0, 255, 0, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("ImGui")).SetTextColor(text_color));
 
-                p = strstr(text, "Colorfull"); color = ImColor(255, 255, 0, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("Colorfull")).SetTextColor(color));
+                p = strstr(text, "Colorfull"); text_color = ImColor(255, 255, 0, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("Colorfull")).SetTextColor(text_color));
 
-                p = strstr(text, "Text."); color = ImColor(0, 0, 255, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("Text")).SetTextColor(color));
+                p = strstr(text, "Text."); text_color = ImColor(0, 0, 255, 255);
+                style.push_back(ImTextCustomStyle(p, p + strlen("Text")).SetTextColor(text_color));
 
                 // underline with different color
                 if (underline)
@@ -1020,12 +1023,15 @@ static void ShowDemoWindowWidgets()
                 if (strikethrough)
                 {
                     p = strstr(text, "Strikethrough text goes here");
-                    style.push_back(ImTextCustomStyle(p, p + strlen("Strikethrough text goes here")).SetStrkethrough(strikethrough));
+                    // If color = 0 text color will be used.
+                    ImColor strikethrough_col(255, 0, 255, 255);
+                    style.push_back(ImTextCustomStyle(p, p + strlen("Strikethrough text goes here")).SetStrkethrough(strikethrough_col));
                 }
-
-                // highlight text
-                p = strstr(text, "the highlight text"); highlight = ImColor(0, 255, 123, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("the highlight text")).SetHighlight(highlight));
+                if (highlight)
+                {
+                    p = strstr(text, "the highlight text"); highlight_col = ImColor(0, 255, 123, 255);
+                    style.push_back(ImTextCustomStyle(p, p + strlen("the highlight text")).SetHighlight(highlight_col));
+                }
 
                 return style;
             };
