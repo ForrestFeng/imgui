@@ -148,7 +148,7 @@ static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const 
 // - BulletTextV()
 //-------------------------------------------------------------------------
 
-void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags, ImTextCustomization customization)
+void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags, const ImTextCustomization &customization)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -256,7 +256,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags,
     }
 }
 
-void ImGui::TextUnformatted(const char* text, const char* text_end, bool warpped, bool disabled, ImTextCustomization customization)
+void ImGui::TextUnformatted(const char* text, const char* text_end, bool warpped, bool disabled, const ImTextCustomization &customization)
 {
     ImGuiContext& g = *GImGui;
     bool need_backup = (g.CurrentWindow->DC.TextWrapPos < 0.0f);  // Keep existing wrap position if one is already set
