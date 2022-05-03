@@ -2365,52 +2365,144 @@ struct ImColor
 
 struct ImTextCustomStyle
 {
-    const char* PosStart, * PosStop;
-    ImColor     TextColor, HighlightColor, UnderlineColor, StrikethroughColor;
-    unsigned Mask;
-
-    enum FLAG
+    struct _RangeItem
     {
-        TEXT_COLOR = 1,
-        HIGHLIGHT_COLR = 1 << 1,
-        UNDER_LINE = 1 << 2,
-        STRIKE_THROUGH = 1 << 3
+        const char* PosStart, * PosStop;
+        ImColor     TextColor, HighlightColor, UnderlineColor, StrikethroughColor, MaskColor;
+        unsigned Flag;
+
+        enum FLAG
+        {
+            TEXTCOLOR = 1,
+            HIGHLIGHT = 1 << 1,
+            UNDERLINE = 1 << 2,
+            STRIKETHROUGH = 1 << 3,
+            MASK = 1 << 4,
+            DISABLED = 1 << 5
+        };
+
+        // A zero color value will be ignored
+        _RangeItem() { PosStart = NULL; PosStop = NULL; TextColor = 0; HighlightColor = 0; UnderlineColor = 0; StrikethroughColor = 0; Flag = 0; }
+        _RangeItem(const char* pos_start, const char* pos_stop) : _RangeItem()
+        {
+            PosStart = pos_start; PosStop = pos_stop;
+        }
     };
 
-    // A zero color value will be ignored
-    ImTextCustomStyle() { PosStart = NULL; PosStop = NULL; TextColor = 0; HighlightColor = 0; UnderlineColor = 0; StrikethroughColor = 0; Mask = 0; }
-    ImTextCustomStyle(const char* pos_start, const char* pos_stop): ImTextCustomStyle()
+    ImVector<_RangeItem> _Ranges;
+
+    ImTextCustomStyle& Range(const char* begin, const char* end)
     {
-        PosStart = pos_start; PosStop = pos_stop;
-    }
-    ImTextCustomStyle& SetTextColor(ImColor text_color)
-    {
-        Mask |= FLAG::TEXT_COLOR;
-        TextColor = text_color;
+        // add this range to list
+        _Ranges.push_back(_RangeItem(begin, end));
         return *this;
     }
-    ImTextCustomStyle& SetHighlight(ImColor highlight)
+    ImTextCustomStyle& TextColor(ImColor col)
     {
-        Mask |= FLAG::HIGHLIGHT_COLR;
-        HighlightColor = highlight;
+        _RangeItem& item = _Ranges.back();
+        item.Flag |= _RangeItem::FLAG::TEXTCOLOR;
+        item.TextColor = col;
         return *this;
     }
-    ImTextCustomStyle& SetUnerline(ImColor underline=0)
+    ImTextCustomStyle& Highlight(ImColor col)
     {
-        Mask |= FLAG::UNDER_LINE;
-        UnderlineColor = underline;
+        _RangeItem& item = _Ranges.back();
+        item.Flag |= _RangeItem::FLAG::HIGHLIGHT;
+        item.HighlightColor = col;
         return *this;
     }
-    ImTextCustomStyle& SetStrkethrough(ImColor strikethrough=0)
+    ImTextCustomStyle& Unerline(ImColor col=0)
     {
-        Mask |= FLAG::STRIKE_THROUGH;
-        StrikethroughColor = strikethrough;
+        _RangeItem& item = _Ranges.back();
+        item.Flag |= _RangeItem::FLAG::UNDERLINE;
+        item.UnderlineColor = col;
         return *this;
+    }
+    ImTextCustomStyle& Strkethrough(ImColor col=0)
+    {
+        _RangeItem& item = _Ranges.back();
+        item.Flag |= _RangeItem::FLAG::STRIKETHROUGH;
+        item.StrikethroughColor = col;
+        return *this;
+    }
+    ImTextCustomStyle& Mask(ImColor col = 0)
+    {
+        _RangeItem& item = _Ranges.back();
+        item.Flag |= _RangeItem::FLAG::MASK;
+        item.MaskColor = col;
+        return *this;
+    }
+    ImTextCustomStyle& Disabled(bool disabled = true)
+    {
+        _RangeItem& item = _Ranges.back();
+        if (disabled)
+            item.Flag |= _RangeItem::FLAG::DISABLED;
+        return *this;
+    }
+
+    struct Style
+    {
+        bool Text;
+        bool Disabled;
+        bool Highlight;
+        bool Underline;
+        bool Strikethrough;
+        // Mask covers the text so that it cannot be seen
+        bool TextMask;
+        ImU32 TextColor;
+        ImU32 HighlightColor;
+        ImU32 UnderlineColor;
+        ImU32 StrikethroughColor;
+        ImU32 TextMaskColor;
+        Style()
+        {
+            memset(this, 0, sizeof(Style));
+        }
+
+    };
+
+    // Find the style for given position
+    Style GetStyleByPositin(const char* char_pos)
+    {
+        Style s;
+
+        for (int idx = 0; idx < _Ranges.Size; idx++)
+        {
+            _RangeItem& style_item = _Ranges[idx];
+            if (char_pos >= style_item.PosStart && char_pos < style_item.PosStop)
+            {
+                if (style_item.Flag & _RangeItem::FLAG::TEXTCOLOR)
+                {
+                    s.Text = true;
+                    s.TextColor = style_item.TextColor;
+                }
+                if (style_item.Flag & _RangeItem::FLAG::HIGHLIGHT)
+                {
+                    s.Highlight = true;
+                    s.HighlightColor = style_item.HighlightColor;
+                }
+                if (style_item.Flag & _RangeItem::FLAG::STRIKETHROUGH)
+                {
+                    s.Strikethrough = true;
+                    s.StrikethroughColor = style_item.StrikethroughColor;
+                }
+                if (style_item.Flag & _RangeItem::FLAG::UNDERLINE)
+                {
+                    s.Underline = true;
+                    s.UnderlineColor = style_item.UnderlineColor;
+                }
+                if (style_item.Flag & _RangeItem::FLAG::DISABLED)
+                {
+                    s.Disabled = true;
+                }
+            }
+        }
+        return s;
     }
 };
 
 // Support text customization like text color, text background, croos line and under line
-typedef ImVector<ImTextCustomStyle> (*ImGuiTextStyleCallback)(const char* text_begin, const char* text_end, void* cb_context); // Callback function for ImGui::TextUnformatted()
+typedef ImTextCustomStyle (*ImGuiTextStyleCallback)(const char* text_begin, const char* text_end, void* cb_context); // Callback function for ImGui::TextUnformatted()
 
 
 namespace ImGui

@@ -3621,7 +3621,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     // TODO custom styles need reserve more
     // Styles contain highlight fill rects (4 vtx, 6 idx), strikethrough and under lines for multi-ranges
     // An algorism needed to calculate how mucth to reserve
-    ImVector<ImTextCustomStyle> custom_style;
+    ImTextCustomStyle custom_style;
     if (style_callback)
     {
         custom_style = style_callback(text_begin, text_end, cb_context);
@@ -3644,20 +3644,224 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     // 0: still in the same line.
     // >0: starts a new line
     int  new_line = 0;
-    // indicates if current glyph has highlight color
-    bool style_highlight = false;
-    // indicates if last glyph has highlight color
-    bool last_style_highlight = false;
-    // indicates if current glyph has underline
-    bool style_underline = false;
-    // indicates if last glyph has underline
-    bool last_style_underline = false;
-    // indicates if current glyph has strikethrough
-    bool style_strikethrough  = false;
-    // indicates if last glyph has strikethrough
-    bool last_style_strikethrough = false;
+    // style for the current glyph
+    ImTextCustomStyle::Style style;
+    // style for last glyph
+    ImTextCustomStyle::Style last_style;
+
+    struct _CustomizationParser
+    {
+        ImTextCustomStyle* custom_style;
+        const char* text_begin;
+        const char* text_end;
+        ImU32 text_col;
+        float size;
+
+        const ImFont *font;
+
+        ImTextCustomStyle::Style style, last_style;
+
+        float line_height;
+        int new_line = 0;
+
+        // top left x, y value before new line (caused by word warp or line break \n)
+        float x_wrap_eol = 0.0f;
+        float y_wrap_eol = 0.0f;
+
+        // top left x, y value for the current glyph
+        float x;
+        float y;
 
 
+        struct PosPair
+        {
+            ImVec2 BeginPos;
+            ImVec2 EndPos;
+            ImU32  Color;
+        };
+        ImVector<PosPair> underline_segments;
+        ImVector<PosPair> strikethrough_segments;
+        ImVector<PosPair> highlight_segments;
+
+
+        _CustomizationParser(ImU32 text_col, float size, const char* text_begin, const char* text_end, const ImFont *font, ImTextCustomStyle* custom_style):
+            text_col(text_col), size(size), text_begin(text_begin), text_end(text_end), font(font), custom_style(custom_style)
+        {
+            line_height = size;
+        }
+
+        void OnNewLine(float x, float y)
+        {
+            if (++new_line == 1)
+            {
+                x_wrap_eol = x;
+                y_wrap_eol = y;
+            }
+        }
+
+        ImU32 OnNewGlyph(const char* pos_start, const char* s, ImWchar c, float x, float y)
+        {
+
+            this->x = x;
+            this->y = y;
+
+            ImU32 col;
+
+                // check custom style
+                last_style = style;
+                style = custom_style->GetStyleByPositin(pos_start);
+                //Porcess(style, style_last, x_wrap_eol, y_wrap_eol, new_line, highlight_segments, underline_segments, strikethrough_segments);
+
+                // Update text color
+
+                if (style.Disabled)
+                {
+                    col = text_col;
+                }
+                else if (style.Text)
+                {
+                    col = style.TextColor;
+                }
+
+                // draw highlight, each highlight segment can cover one or more glyphs
+                float highlight_offset_y = line_height;
+                if (!last_style.Highlight && style.Highlight) // highlight begin
+                {
+                    ImU32 highlight_color = style.HighlightColor;
+                    if (highlight_color == 0) highlight_color = text_col;
+                    highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
+                    // highlight begins from a new line
+                    if (new_line) new_line = false;
+                }
+                else if (last_style.Highlight && style.Highlight) // highlight goes on
+                {
+                    // handle new line caused by word wrap or \n
+                    if (new_line > 0)
+                    {
+                        // need end the segment with point we saved before new line starting
+                        highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
+                        // start a new segment with current point
+                        ImU32 highlight_color = style.HighlightColor;
+                        if (highlight_color == 0) highlight_color = text_col;
+                        highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
+                        new_line = 0;
+                    }
+                }
+                else if (last_style.Highlight && !style.Highlight && highlight_segments.Size > 0) // highlight end
+                {
+                    IM_ASSERT_USER_ERROR(highlight_segments.back().EndPos.x == FLT_MAX && highlight_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
+                    // special case, the highlight segment ended and with new line(word wrap or one or more \n) follwed
+                    if (new_line > 0)
+                    {
+                        highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
+                        new_line = 0;
+                    }
+                    // normal case, the highlight segment ended withou new line followed
+                    else
+                    {
+                        highlight_segments.back().EndPos = ImVec2(x, y + highlight_offset_y);
+                    }
+                }
+
+                // draw underline, each underline segment can cover one or more glyphs
+                float underline_offset_y = line_height;
+                if (!last_style.Underline && style.Underline) // underline begin
+                {
+                    ImU32 underline_color = style.UnderlineColor;
+                    if (underline_color == 0) underline_color = text_col;
+                    underline_segments.push_back({ ImVec2(x, y + underline_offset_y), ImVec2(FLT_MAX, FLT_MAX), underline_color });
+                    // underline begins from a new line
+                    if (new_line) new_line = false;
+                }
+                else if (last_style.Underline && style.Underline) // underline goes on
+                {
+                    // handle new line caused by word wrap or \n
+                    if (new_line > 0)
+                    {
+                        // need end the segment with point we saved before new line starting
+                        underline_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + underline_offset_y);
+                        // start a new segment with current point
+                        ImU32 underline_color = style.UnderlineColor;
+                        if (underline_color == 0) underline_color = text_col;
+                        underline_segments.push_back({ ImVec2(x, y + underline_offset_y), ImVec2(FLT_MAX, FLT_MAX), underline_color });
+                        new_line = 0;
+                    }
+                }
+                else if (last_style.Underline && !style.Underline && underline_segments.Size > 0) // underline end
+                {
+                    IM_ASSERT_USER_ERROR(underline_segments.back().EndPos.x == FLT_MAX && underline_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
+                    // special case, the underline segment ended and with new line(word wrap or one or more \n) follwed
+                    if (new_line > 0)
+                    {
+                        underline_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + underline_offset_y);
+                        new_line = 0;
+                    }
+                    // normal case, the underline segment ended withou new line followed
+                    else
+                    {
+                        underline_segments.back().EndPos = ImVec2(x, y + underline_offset_y);
+                    }
+                }
+
+
+                // draw strikethrough, each strikethrough segment can cover one or more glyphs
+                // Reference to word process SW, the strke y position is about 59% line_height down.
+                float strikethrough_offset_y = (line_height * 59.f / 100.f);
+                if (!last_style.Strikethrough && style.Strikethrough) // strikethrough begin
+                {
+                    ImU32 strikethrough_color = style.StrikethroughColor;
+                    if (strikethrough_color == 0) strikethrough_color = text_col;
+                    strikethrough_segments.push_back({ ImVec2(x, y + strikethrough_offset_y), ImVec2(FLT_MAX, FLT_MAX), strikethrough_color });
+                    // strikethrough begins from a new line
+                    if (new_line) new_line = false;
+
+                    if (s == text_end)
+                    {
+                        const ImFontGlyph* glyph = font->FindGlyph((ImWchar)c);
+                        const float cw = glyph == NULL ? 0.0f : glyph->AdvanceX * (size / font->FontSize);
+                        strikethrough_segments.back().EndPos = ImVec2(x + cw, y + strikethrough_offset_y);
+                    }
+                }
+                else if (last_style.Strikethrough && style.Strikethrough) // strikethrough goes on
+                {
+                    // complete the segment if we reaches to the end of the text
+                    if (s == text_end)
+                    {
+                        const ImFontGlyph* glyph = font->FindGlyph((ImWchar)c);
+                        const float cw = glyph == NULL ? 0.0f : glyph->AdvanceX * (size/font->FontSize);
+                        strikethrough_segments.back().EndPos = ImVec2(x + cw, y + strikethrough_offset_y);
+                    }
+                    // handle new line caused by word wrap or \n
+                    else if (new_line > 0)
+                    {
+                        // need end the segment with point we saved before new line starting
+                        strikethrough_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + strikethrough_offset_y);
+                        // start a new segment with current point
+                        ImU32 strikethrough_color = style.StrikethroughColor;
+                        if (strikethrough_color == 0) strikethrough_color = text_col;
+                        strikethrough_segments.push_back({ ImVec2(x, y + strikethrough_offset_y), ImVec2(FLT_MAX, FLT_MAX), strikethrough_color });
+                        new_line = 0;
+                    }
+
+                }
+                else if (last_style.Strikethrough && !style.Strikethrough && strikethrough_segments.Size > 0) // strikethrough end
+                {
+                    IM_ASSERT_USER_ERROR(strikethrough_segments.back().EndPos.x == FLT_MAX && strikethrough_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
+                    // special case, the strikethrough segment ended and with new line(word wrap or one or more \n) follwed
+                    if (new_line > 0)
+                    {
+                        strikethrough_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + strikethrough_offset_y);
+                        new_line = 0;
+                    }
+                    // normal case, the strikethrough segment ended withou new line followed
+                    else
+                    {
+                        strikethrough_segments.back().EndPos = ImVec2(x, y + strikethrough_offset_y);
+                    }
+                }
+        }
+
+    };
 
 
     while (s < text_end)
@@ -3676,7 +3880,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             {
                // For \n there may be more than one continiours \n
                // keep the position used by under line, strikethrough and highlight only for the first new line
-                if (++new_line == 1)
+                if (++new_line == 1 && style_callback)
                 {
                     x_wrap_eol = x;
                     y_wrap_eol = y;
@@ -3721,7 +3925,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             {
                 // For \n there may be more than one continiours \n
                 // keep the position used by under line, strikethrough and highlight only for the first new line
-                if (++new_line == 1)
+                if (++new_line == 1 && style_callback)
                 {
                     x_wrap_eol = x;
                     y_wrap_eol = y;
@@ -3738,61 +3942,37 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 continue;
         }
 
-        // highlight, underline, strikethrough handling logic
+
+         // highlight, underline, strikethrough handling logic
+        if (style_callback)
         {
             // check custom style
-            // NOTE: For overlapped ranges, the last style win.
-            bool underline = false;
-            bool strikethrough = false;
-            bool highlight = false;
-            ImU32 underline_color;
-            ImU32 strikethrough_color;
-            ImU32 highlight_color;
-            for (int style_n = 0; style_n < custom_style.Size; style_n++)
+            last_style = style;
+            style = custom_style.GetStyleByPositin(pos_start);
+            //Porcess(style, style_last, x_wrap_eol, y_wrap_eol, new_line, highlight_segments, underline_segments, strikethrough_segments);
+
+            // Update text color
+
+            if (style.Disabled)
             {
-                ImTextCustomStyle& style = custom_style[style_n];
-                if (pos_start >= style.PosStart && pos_start < style.PosStop)
-                {
-
-                    if (style.Mask & ImTextCustomStyle::FLAG::TEXT_COLOR)
-                    {
-                        col = style.TextColor;
-                    }
-                    if (style.Mask & ImTextCustomStyle::FLAG::HIGHLIGHT_COLR)
-                    {
-                        highlight = true;
-                        highlight_color = style.HighlightColor;
-                    }
-                    if (style.Mask & ImTextCustomStyle::FLAG::STRIKE_THROUGH)
-                    {
-                        strikethrough = true;
-                        strikethrough_color = style.StrikethroughColor;
-                    }
-                    if (style.Mask & ImTextCustomStyle::FLAG::UNDER_LINE)
-                    {
-                        underline = true;
-                        underline_color = style.UnderlineColor;
-                    }
-                }
+                col = text_col;
             }
-            last_style_underline = style_underline;
-            style_underline = underline;
-            last_style_strikethrough = style_strikethrough;
-            style_strikethrough = strikethrough;
-            last_style_highlight = style_highlight;
-            style_highlight = highlight;
-
+            else if (style.Text)
+            {
+                col = style.TextColor;
+            }
 
             // draw highlight, each highlight segment can cover one or more glyphs
             float highlight_offset_y = line_height;
-            if (style_highlight && !last_style_highlight) // highlight begin
+            if (!last_style.Highlight && style.Highlight) // highlight begin
             {
+                ImU32 highlight_color = style.HighlightColor;
                 if (highlight_color == 0) highlight_color = text_col;
                 highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
                 // highlight begins from a new line
                 if (new_line) new_line = false;
             }
-            else if (last_style_highlight && style_highlight) // highlight goes on
+            else if (last_style.Highlight && style.Highlight) // highlight goes on
             {
                 // handle new line caused by word wrap or \n
                 if (new_line > 0)
@@ -3800,12 +3980,13 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     // need end the segment with point we saved before new line starting
                     highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
                     // start a new segment with current point
+                    ImU32 highlight_color = style.HighlightColor;
                     if (highlight_color == 0) highlight_color = text_col;
                     highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
                     new_line = 0;
                 }
             }
-            else if (!style_highlight && last_style_highlight && highlight_segments.Size > 0) // highlight end
+            else if ( last_style.Highlight && !style.Highlight  && highlight_segments.Size > 0) // highlight end
             {
                 IM_ASSERT_USER_ERROR(highlight_segments.back().EndPos.x == FLT_MAX && highlight_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
                 // special case, the highlight segment ended and with new line(word wrap or one or more \n) follwed
@@ -3821,18 +4002,17 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 }
             }
 
-
-
             // draw underline, each underline segment can cover one or more glyphs
             float underline_offset_y = line_height;
-            if (style_underline && !last_style_underline) // underline begin
+            if (!last_style.Underline && style.Underline) // underline begin
             {
+                ImU32 underline_color = style.UnderlineColor;
                 if (underline_color == 0) underline_color = text_col;
                 underline_segments.push_back({ ImVec2(x, y + underline_offset_y), ImVec2(FLT_MAX, FLT_MAX), underline_color });
                 // underline begins from a new line
                 if (new_line) new_line = false;
             }
-            else if (last_style_underline && style_underline) // underline goes on
+            else if (last_style.Underline && style.Underline) // underline goes on
             {
                 // handle new line caused by word wrap or \n
                 if (new_line > 0)
@@ -3840,12 +4020,13 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     // need end the segment with point we saved before new line starting
                     underline_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + underline_offset_y);
                     // start a new segment with current point
+                    ImU32 underline_color = style.UnderlineColor;
                     if (underline_color == 0) underline_color = text_col;
                     underline_segments.push_back({ ImVec2(x, y + underline_offset_y), ImVec2(FLT_MAX, FLT_MAX), underline_color });
                     new_line = 0;
                 }
             }
-            else if (!style_underline && last_style_underline && underline_segments.Size > 0) // underline end
+            else if (last_style.Underline && !style.Underline && underline_segments.Size > 0) // underline end
             {
                 IM_ASSERT_USER_ERROR(underline_segments.back().EndPos.x == FLT_MAX && underline_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
                 // special case, the underline segment ended and with new line(word wrap or one or more \n) follwed
@@ -3865,27 +4046,44 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             // draw strikethrough, each strikethrough segment can cover one or more glyphs
             // Reference to word process SW, the strke y position is about 59% line_height down.
             float strikethrough_offset_y = (line_height * 59.f / 100.f);
-            if (style_strikethrough && !last_style_strikethrough) // strikethrough begin
+            if (!last_style.Strikethrough && style.Strikethrough) // strikethrough begin
             {
+                ImU32 strikethrough_color = style.StrikethroughColor;
                 if (strikethrough_color == 0) strikethrough_color = text_col;
                 strikethrough_segments.push_back({ ImVec2(x, y + strikethrough_offset_y), ImVec2(FLT_MAX, FLT_MAX), strikethrough_color });
                 // strikethrough begins from a new line
                 if (new_line) new_line = false;
+
+                if (s == text_end)
+                {
+                    const ImFontGlyph* glyph = FindGlyph((ImWchar)c);
+                    const float cw = glyph == NULL ? 0.0f : glyph->AdvanceX * scale;
+                    strikethrough_segments.back().EndPos = ImVec2(x + cw, y + strikethrough_offset_y);
+                }
             }
-            else if (last_style_strikethrough && style_strikethrough) // strikethrough goes on
+            else if (last_style.Strikethrough && style.Strikethrough) // strikethrough goes on
             {
+                // complete the segment if we reaches to the end of the text
+                if (s == text_end)
+                {
+                    const ImFontGlyph* glyph = FindGlyph((ImWchar)c);
+                    const float cw = glyph == NULL ? 0.0f : glyph->AdvanceX * scale;
+                    strikethrough_segments.back().EndPos = ImVec2(x + cw, y + strikethrough_offset_y);
+                }
                 // handle new line caused by word wrap or \n
-                if (new_line > 0)
+                else if (new_line > 0)
                 {
                     // need end the segment with point we saved before new line starting
                     strikethrough_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + strikethrough_offset_y);
-                    // start a new segment with current point 
+                    // start a new segment with current point
+                    ImU32 strikethrough_color = style.StrikethroughColor;
                     if (strikethrough_color == 0) strikethrough_color = text_col;
                     strikethrough_segments.push_back({ ImVec2(x, y + strikethrough_offset_y), ImVec2(FLT_MAX, FLT_MAX), strikethrough_color });
                     new_line = 0;
                 }
+ 
             }
-            else if (!style_strikethrough && last_style_strikethrough && strikethrough_segments.Size > 0) // strikethrough end
+            else if (last_style.Strikethrough  && !style.Strikethrough && strikethrough_segments.Size > 0) // strikethrough end
             {
                 IM_ASSERT_USER_ERROR(strikethrough_segments.back().EndPos.x == FLT_MAX && strikethrough_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
                 // special case, the strikethrough segment ended and with new line(word wrap or one or more \n) follwed

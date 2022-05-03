@@ -964,6 +964,163 @@ static void ShowDemoWindowWidgets()
             ImGui::TreePop();
         }
 
+        IMGUI_DEMO_MARKER("Widgets/Text/Text Customization");
+        if (ImGui::TreeNode("Text Customization"))
+        {
+     
+            static ImGuiColorEditFlags col_flag = ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
+
+
+            // Demo the colorful text. In practice, we can generate the index for a pattern or text with a grep like tool.
+            const static char* text = "Hello, Dear ImGui Text Customization. It works with Text Highlight, Text Underline, Text Strikethrough, Text Wrap, Text Disabling and Text Mask. "
+                "And it shold work across one or more \r\n\r\nempty lines as well. You are free to apply one or more customization for any text inside the string.\r\n";
+
+            struct _Config
+            {
+                bool wrapped = true;
+                bool disabled = false;
+                bool textcolor = true;
+                bool highlight = true;
+                bool underline = true;
+                bool strikethrough = true;
+
+                // text color
+                int txt_1_pos_begin = 0; int txt_1_pos_end = 0;
+                ImVec4 txt_col_1 = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+                int txt_2_pos_begin = 0;  int txt_2_pos_end = 0;
+                ImVec4 txt_col_2 = ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+
+                // highlight color
+                int hl_1_pos_begin = 0; int hl_1_pos_end = 0;
+                ImVec4 hl_col_1 = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+                int hl_2_pos_begin = 0; int hl_2_pos_end = 0;
+                ImVec4 hl_col_2 = ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+
+                // underline color
+                int ul_1_pos_begin = 0; int ul_1_pos_end = 0;
+                ImVec4 ul_col_1 = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+                int ul_2_pos_begin = 0; int ul_2_pos_end = 0;
+                ImVec4 ul_col_2 = ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+
+                // strikethrough color
+                int st_1_pos_begin = 0; int st_1_pos_end = 0;
+                ImVec4 st_col_1 = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+                int st_2_pos_begin = 0; int st_2_pos_end = 0;
+                ImVec4 st_col_2 = ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+
+                // text mask color
+                int msk_1_pos_begin = 0; int msk_1_pos_end = 0;
+                ImVec4 msk_col_1 = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+                int mas_2_pos_begin = 0; int mas_2_pos_end = 0;
+                ImVec4 msk_col_2 = ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
+            };
+
+            static _Config c;
+            int len = strlen(text);
+
+            ImGui::BeginGroup();
+            ImGui::Checkbox("Wrap", &c.wrapped);
+            ImGui::SameLine();
+            ImGui::Checkbox("Disabled", &c.disabled);
+            ImGui::SameLine();
+            ImGui::Checkbox("Textcolor", &c.textcolor);
+            ImGui::SameLine();
+            ImGui::Checkbox("Highlight", &c.highlight);
+            ImGui::SameLine();
+            ImGui::Checkbox("Underline", &c.underline);
+            ImGui::SameLine();
+            ImGui::Checkbox("Strikethrough", &c.strikethrough);
+            ImGui::EndGroup();
+
+
+            ImGui::BeginGroup();
+            ImGui::ColorEdit4("Text Col_1##1", (float*)&c.txt_col_1, col_flag);
+            ImGui::SameLine();
+            ImGui::DragIntRange2("Text Color Range 1", &c.txt_1_pos_begin, &c.txt_1_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
+            ImGui::EndGroup();
+            ImGui::BeginGroup();
+            ImGui::ColorEdit4("Text Col_2##2", (float*)&c.txt_col_2, col_flag);
+            ImGui::SameLine();
+            ImGui::DragIntRange2("Text Color Range 2", &c.txt_2_pos_begin, &c.txt_2_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
+            ImGui::EndGroup();
+
+            ImGui::BeginGroup();
+            ImGui::ColorEdit4("Highligh Col_1##1", (float*)&c.hl_col_1, col_flag);
+            ImGui::SameLine();
+            ImGui::DragIntRange2("Highlight Range 1", &c.hl_1_pos_begin, &c.hl_1_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
+            ImGui::EndGroup();
+            ImGui::BeginGroup();
+            ImGui::ColorEdit4("Highlight Col_1##2", (float*)&c.hl_col_2, col_flag);
+            ImGui::SameLine();
+            ImGui::DragIntRange2("Highlight Range 2", &c.hl_2_pos_begin, &c.hl_2_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
+            ImGui::EndGroup();
+
+
+            ImGui::BeginGroup();
+            ImGui::ColorEdit4("Underline Col_1##1", (float*)&c.ul_col_1, col_flag);
+            ImGui::SameLine();
+            ImGui::DragIntRange2("Underline Range 1", &c.ul_1_pos_begin, &c.ul_1_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
+            ImGui::EndGroup();
+            ImGui::BeginGroup();
+            ImGui::ColorEdit4("Underline Col_2##1", (float*)&c.ul_col_2, col_flag);
+            ImGui::SameLine();
+            ImGui::DragIntRange2("Underline Range 2", &c.ul_2_pos_begin, &c.ul_2_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
+            ImGui::EndGroup();
+
+            ImGui::BeginGroup();
+            ImGui::ColorEdit4("Strikethrough Col_1##1", (float*)&c.st_col_1, col_flag);
+            ImGui::SameLine();
+            ImGui::DragIntRange2("Strikethrough Range 1", &c.st_1_pos_begin, &c.st_1_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
+            ImGui::EndGroup();
+            ImGui::BeginGroup();
+            ImGui::ColorEdit4("Strikethrough Col_2##1", (float*)&c.st_col_2, col_flag);
+            ImGui::SameLine();
+            ImGui::DragIntRange2("Strikethrough Range 2", &c.st_2_pos_begin, &c.st_2_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
+            ImGui::EndGroup();
+
+
+            auto style_callback = [](const char* text, const char* text_end, void* cb_context) -> ImTextCustomStyle
+            {
+                (void)text_end;//suppress warning
+                _Config &c = *(_Config*)cb_context;//suppres warning
+
+                ImTextCustomStyle style;
+
+                // text color in range
+                if (c.textcolor)
+                {
+                    style.Range(text + c.txt_1_pos_begin, text + c.txt_1_pos_end).TextColor(c.txt_col_1).Disabled(c.disabled);
+                    style.Range(text + c.txt_2_pos_begin, text + c.txt_2_pos_end).TextColor(c.txt_col_2).Disabled(c.disabled);
+                }
+                // highlight 
+                if (c.highlight)
+                {
+                    style.Range(text + c.hl_1_pos_begin, text + c.hl_1_pos_end).Highlight(c.hl_col_1);
+                    style.Range(text + c.hl_2_pos_begin, text + c.hl_2_pos_end).Highlight(c.hl_col_2);
+                }
+                // underline with different color
+                if (c.underline)
+                {
+                    style.Range(text + c.ul_1_pos_begin, text + c.ul_1_pos_end).Unerline(c.ul_col_1);
+                    style.Range(text + c.ul_2_pos_begin, text + c.ul_2_pos_end).Unerline(c.ul_col_2);
+                }
+                // strikethrough for a range
+                if (c.strikethrough)
+                {
+                    style.Range(text + c.st_1_pos_begin, text + c.st_1_pos_end).Strkethrough(c.st_col_1);
+                    style.Range(text + c.st_2_pos_begin, text + c.st_2_pos_end).Strkethrough(c.st_col_2);
+                }
+
+                return style;
+            };
+
+            ImGui::TextUnformatted(text, NULL, c.wrapped, c.disabled, style_callback, &c);
+
+
+            ImGui::TreePop();
+        }
+
+
         IMGUI_DEMO_MARKER("Widgets/Text/Word Color, Highlight, Underline, Etc.");
         if (ImGui::TreeNode("Word with  Color, Highlight, Underline Etc."))
         {
@@ -989,52 +1146,61 @@ static void ShowDemoWindowWidgets()
             const static char* text = "Hello, Dear ImGui Colorfull Text. Underline text goes \r\n\r\nhere. Strikethrough text goes here. It also supports the highlight text. "
                 "Normal text goes here. Turn on/off Wrap, Disable, Underline and Strikethrough to see different styles in one line.";
 
-            auto style_callback = [](const char* text, const char* text_end, void* cb_context) -> ImVector<ImTextCustomStyle>
+            auto style_callback = [](const char* text, const char* text_end, void* cb_context) -> ImTextCustomStyle
             {
                 (void)text_end;//suppress warning
                 (void)cb_context;//suppres warning
 
-                ImVector< ImTextCustomStyle> style;
+                ImTextCustomStyle style;
                 ImColor text_color, highlight_col;
 
                 // colorfull text
                 const char* p = strstr(text, "Dear"); text_color = ImColor(255, 0, 0, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("Dear")).SetTextColor(text_color));
+                style.Range(p, p + strlen("Dear")).TextColor(text_color).Disabled(disabled);
 
                 p = strstr(text, "ImGui"); text_color = ImColor(0, 255, 0, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("ImGui")).SetTextColor(text_color));
+                style.Range(p, p + strlen("ImGui")).TextColor(text_color).Disabled(disabled);
 
                 p = strstr(text, "Colorfull"); text_color = ImColor(255, 255, 0, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("Colorfull")).SetTextColor(text_color));
+                style.Range(p, p + strlen("Colorfull")).TextColor(text_color).Disabled(disabled);
 
                 p = strstr(text, "Text."); text_color = ImColor(0, 0, 255, 255);
-                style.push_back(ImTextCustomStyle(p, p + strlen("Text")).SetTextColor(text_color));
+                style.Range(p, p + strlen("Text")).TextColor(text_color).Disabled(disabled);
 
                 // underline with different color
                 if (underline)
                 {
                     p = strstr(text, "olorfu");
-                    style.push_back(ImTextCustomStyle(p, p + strlen("olorfu")).SetUnerline(ImColor(0, 255, 0, 255)));
+                    style.Range(p, p + strlen("olorfu")).Unerline(ImColor(0, 255, 0, 255));
 
                     p = strstr(text, "Underline text goes \r\n\r\nhere");
-                    style.push_back(ImTextCustomStyle(p, p + strlen("Underline text goes \r\n\r\nhere")).SetUnerline());
+                    style.Range(p, p + strlen("Underline text goes \r\n\r\nhere")).Unerline();
                 }
 
                 if (strikethrough)
                 {
                     p = strstr(text, "Strikethrough text goes here");
                     // If color = 0 text color will be used.
-                    ImColor strikethrough_col(255, 0, 255, 255);
-                    style.push_back(ImTextCustomStyle(p, p + strlen("Strikethrough text goes here")).SetStrkethrough(strikethrough_col));
+                    ImColor strikethrough_col(255, 0, 0, 255);
+                    style.Range(p, p + strlen("Strikethrough text goes here")).Strkethrough(strikethrough_col);
                 }
                 if (highlight)
                 {
-                    p = strstr(text, "the highlight text"); highlight_col = ImColor(0, 255, 123, 255);
-                    style.push_back(ImTextCustomStyle(p, p + strlen("the highlight text")).SetHighlight(highlight_col));
+                    p = strstr(text, "the highlight text"); highlight_col = ImColor(226, 217, 78, 255);
+                    style.Range(p, p + strlen("the highlight text")).Highlight(highlight_col);
                 }
 
                 return style;
             };
+
+            auto style_callback_hello = [](const char* text, const char* text_end, void* cb_context) -> ImVector<ImTextCustomStyle>
+            {
+                ImVector< ImTextCustomStyle> style;
+                return style;
+            };
+
+            //ImGui::TextUnformatted("X", NULL, wrapped, disabled, style_callback_hello, NULL);
+
             ImGui::TextUnformatted(text, NULL, wrapped, disabled, style_callback, NULL);
 
           
