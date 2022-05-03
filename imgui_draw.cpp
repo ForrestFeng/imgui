@@ -3694,7 +3694,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             }
         }
 
-        ImU32 _InternalOnNewGlyph(ImVector<PosPair> &segments, char* glyph_end, unsigned int glyph_code, ImU32 color,
+        void _InternalOnNewGlyph(ImVector<PosPair> &segments, const char* glyph_end, unsigned int glyph_code, ImU32 color,
             bool current_on, bool last_on, float offset_y)
         {
             // common_process()
@@ -3749,7 +3749,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     segments.back().EndPos = ImVec2(x, y + offset_y);
                 }
             }
-
         }
 
         ImU32 OnNewGlyph(const char* glyph_pos, const char* glyph_end, unsigned int glyph_code, float x_pos, float y_pos)
@@ -3776,46 +3775,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 col = style.TextColor;
             }
 
-            // draw highlight, each highlight segment can cover one or more glyphs
-            float highlight_offset_y = line_height;
-            if (!last_style.Highlight && style.Highlight) // highlight begin
-            {
-                ImU32 highlight_color = style.HighlightColor;
-                if (highlight_color == 0) highlight_color = text_col;
-                highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
-                // highlight begins from a new line
-                if (new_line) new_line = false;
-            }
-            else if (last_style.Highlight && style.Highlight) // highlight goes on
-            {
-                // handle new line caused by word wrap or \n
-                if (new_line > 0)
-                {
-                    // need end the segment with point we saved before new line starting
-                    highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
-                    // start a new segment with current point
-                    ImU32 highlight_color = style.HighlightColor;
-                    if (highlight_color == 0) highlight_color = text_col;
-                    highlight_segments.push_back({ ImVec2(x, y), ImVec2(FLT_MAX, FLT_MAX), highlight_color });
-                    new_line = 0;
-                }
-            }
-            else if (last_style.Highlight && !style.Highlight && highlight_segments.Size > 0) // highlight end
-            {
-                IM_ASSERT_USER_ERROR(highlight_segments.back().EndPos.x == FLT_MAX && highlight_segments.back().EndPos.y == FLT_MAX, "EndPos is expected no valide value.");
-                // special case, the highlight segment ended and with new line(word wrap or one or more \n) follwed
-                if (new_line > 0)
-                {
-                    highlight_segments.back().EndPos = ImVec2(x_wrap_eol, y_wrap_eol + highlight_offset_y);
-                    new_line = 0;
-                }
-                // normal case, the highlight segment ended withou new line followed
-                else
-                {
-                    highlight_segments.back().EndPos = ImVec2(x, y + highlight_offset_y);
-                }
-            }
-
+            _InternalOnNewGlyph(highlight_segments, glyph_end, glyph_code, style.HighlightColor, style.Highlight, last_style.Highlight, line_height);
+            
             // draw underline, each underline segment can cover one or more glyphs
             float underline_offset_y = line_height;
             if (!last_style.Underline && style.Underline) // underline begin
