@@ -2448,12 +2448,12 @@ struct ImTextCustomStyle
         bool Underline;
         bool Strikethrough;
         // Mask covers the text so that it cannot be seen
-        bool TextMask;
+        bool Mask;
         ImU32 TextColor;
         ImU32 HighlightColor;
         ImU32 UnderlineColor;
         ImU32 StrikethroughColor;
-        ImU32 TextMaskColor;
+        ImU32 MaskColor;
         Style()
         {
             memset(this, 0, sizeof(Style));
@@ -2494,6 +2494,11 @@ struct ImTextCustomStyle
                 if (style_item.Flag & _RangeItem::FLAG::DISABLED)
                 {
                     s.Disabled = true;
+                }
+                if (style_item.Flag & _RangeItem::FLAG::MASK)
+                {
+                    s.Mask = true;
+                    s.MaskColor = style_item.MaskColor;
                 }
             }
         }

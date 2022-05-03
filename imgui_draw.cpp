@@ -3699,6 +3699,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         Segments underline_segments;
         Segments strikethrough_segments;
         Segments highlight_segments;
+        Segments mask_segments;
 
         // CTOR
         _CustomizationParser(ImU32 text_col, float size, const char* text_begin, const char* text_end, const ImFont *font, ImTextCustomStyle* custom_style):
@@ -3725,6 +3726,10 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             {
                 highlight_segments.data.pop_back();
             }
+            while (mask_segments.data.Size > 0 && mask_segments.data.back().EndPos.x == FLT_MAX)
+            {
+                mask_segments.data.pop_back();
+            }
         }
 
         // Handles the new line which caused by word warp or \n. Multiple \n will result the new_line > 1
@@ -3734,13 +3739,15 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             highlight_segments.OnNewLine(char_pos, x_pos, y_pos);
             underline_segments.OnNewLine(char_pos, x_pos, y_pos);
             strikethrough_segments.OnNewLine(char_pos, x_pos, y_pos);
+            mask_segments.OnNewLine(char_pos, x_pos, y_pos);
 
             // Reaches to the end of the end of the text. this is the last chance to close all open position
             if (char_pos == text_end)
             {
-                _InternalOnNewGlyph(highlight_segments, char_pos, 0, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0, line_height);
+                _InternalOnNewGlyph(highlight_segments, char_pos, 0, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0.0f, line_height);
                 _InternalOnNewGlyph(underline_segments, char_pos, 0, style.UnderlineColor, last_style.UnderlineColor, style.Underline, last_style.Underline, line_height, line_height);
                 _InternalOnNewGlyph(strikethrough_segments, char_pos, 0, style.StrikethroughColor, last_style.StrikethroughColor, style.Strikethrough, last_style.Strikethrough, strikethrough_offset_y, strikethrough_offset_y);
+                _InternalOnNewGlyph(mask_segments, char_pos, 0, style.MaskColor, last_style.MaskColor, style.Mask, last_style.Mask, 0.0f, line_height);
             }
         }
 
@@ -3842,7 +3849,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             _InternalOnNewGlyph(highlight_segments, glyph_end, glyph_code, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0.0f, line_height);
             _InternalOnNewGlyph(underline_segments, glyph_end, glyph_code, style.UnderlineColor, last_style.UnderlineColor, style.Underline, last_style.Underline, line_height, line_height);
             _InternalOnNewGlyph(strikethrough_segments, glyph_end, glyph_code, style.StrikethroughColor, last_style.StrikethroughColor, style.Strikethrough, last_style.Strikethrough, strikethrough_offset_y, strikethrough_offset_y);
-
+            _InternalOnNewGlyph(mask_segments, glyph_end, glyph_code, style.MaskColor, last_style.MaskColor, style.Mask, last_style.Mask, 0.0f, line_height);
             return col;
         }
     };
@@ -4085,6 +4092,17 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             float thickness = (float)ceill(ImMax<float>(1.0f, line_height * 4.5f / 100.0f));
             draw_list->AddLine(begin, end, color, thickness);
         }
+
+        // Draw the mask last because is used to mask the text
+        for (int i = 0; i < parser.mask_segments.data.Size; i++)
+        {
+            IM_ASSERT_USER_ERROR(parser.mask_segments.data.back().EndPos.x != FLT_MAX && parser.mask_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
+            ImVec2 begin = parser.mask_segments.data[i].BeginPos;
+            ImVec2 end = parser.mask_segments.data[i].EndPos;
+            ImColor color = parser.mask_segments.data[i].Color;
+            draw_list->AddRectFilled(begin, end, color);
+        }
+
     }
 }
 

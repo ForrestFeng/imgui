@@ -965,7 +965,17 @@ static void ShowDemoWindowWidgets()
         }
 
         IMGUI_DEMO_MARKER("Widgets/Text/Text Customization");
-        if (ImGui::TreeNode("Text Customization"))
+        if (ImGui::TreeNode("Text Customization Simple"))
+        {
+            ImGui::Text("Underline");
+
+//            ImGui::TextUnformatted("The fox jumps over the box", NULL, false, false,);
+            ImGui::TreePop();
+        }
+
+
+        IMGUI_DEMO_MARKER("Widgets/Text/Text Customization");
+        if (ImGui::TreeNode("Text Customization Combined"))
         {
      
             static ImGuiColorEditFlags col_flag = ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
@@ -983,6 +993,7 @@ static void ShowDemoWindowWidgets()
                 bool highlight = true;
                 bool underline = true;
                 bool strikethrough = true;
+                bool textmask = true;
 
                 // text color
                 int txt_1_pos_begin = 0; int txt_1_pos_end = 0;
@@ -1011,73 +1022,86 @@ static void ShowDemoWindowWidgets()
                 // text mask color
                 int msk_1_pos_begin = 0; int msk_1_pos_end = 0;
                 ImVec4 msk_col_1 = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
-                int mas_2_pos_begin = 0; int mas_2_pos_end = 0;
+                int msk_2_pos_begin = 0; int msk_2_pos_end = 0;
                 ImVec4 msk_col_2 = ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 200.0f / 255.0f);
             };
 
             static _Config c;
             int len = strlen(text);
 
-            ImGui::BeginGroup();
-            ImGui::Checkbox("Wrap", &c.wrapped);
-            ImGui::SameLine();
-            ImGui::Checkbox("Disabled", &c.disabled);
-            ImGui::SameLine();
-            ImGui::Checkbox("Textcolor", &c.textcolor);
-            ImGui::SameLine();
-            ImGui::Checkbox("Highlight", &c.highlight);
-            ImGui::SameLine();
-            ImGui::Checkbox("Underline", &c.underline);
-            ImGui::SameLine();
-            ImGui::Checkbox("Strikethrough", &c.strikethrough);
-            ImGui::EndGroup();
+            {
+                ImGui::BeginGroup();
+                ImGui::Checkbox("Wrap", &c.wrapped);
+                ImGui::SameLine();
+                ImGui::Checkbox("Disabled", &c.disabled);
+                ImGui::SameLine();
+                ImGui::Checkbox("Textcolor", &c.textcolor);
+                ImGui::SameLine();
+                ImGui::Checkbox("Highlight", &c.highlight);
+                ImGui::SameLine();
+                ImGui::Checkbox("Underline", &c.underline);
+                ImGui::SameLine();
+                ImGui::Checkbox("Strikethrough", &c.strikethrough);
+                ImGui::SameLine();
+                ImGui::Checkbox("Text Mask", &c.textmask);
+                ImGui::EndGroup();
 
 
-            ImGui::BeginGroup();
-            ImGui::ColorEdit4("Text Col_1##1", (float*)&c.txt_col_1, col_flag);
-            ImGui::SameLine();
-            ImGui::DragIntRange2("Text Color Range 1", &c.txt_1_pos_begin, &c.txt_1_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
-            ImGui::EndGroup();
-            ImGui::BeginGroup();
-            ImGui::ColorEdit4("Text Col_2##2", (float*)&c.txt_col_2, col_flag);
-            ImGui::SameLine();
-            ImGui::DragIntRange2("Text Color Range 2", &c.txt_2_pos_begin, &c.txt_2_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
-            ImGui::EndGroup();
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Text Col_1##1", (float*)&c.txt_col_1, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Text Color 1", &c.txt_1_pos_begin, &c.txt_1_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Text Col_2##2", (float*)&c.txt_col_2, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Text Color 2", &c.txt_2_pos_begin, &c.txt_2_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
 
-            ImGui::BeginGroup();
-            ImGui::ColorEdit4("Highligh Col_1##1", (float*)&c.hl_col_1, col_flag);
-            ImGui::SameLine();
-            ImGui::DragIntRange2("Highlight Range 1", &c.hl_1_pos_begin, &c.hl_1_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
-            ImGui::EndGroup();
-            ImGui::BeginGroup();
-            ImGui::ColorEdit4("Highlight Col_1##2", (float*)&c.hl_col_2, col_flag);
-            ImGui::SameLine();
-            ImGui::DragIntRange2("Highlight Range 2", &c.hl_2_pos_begin, &c.hl_2_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
-            ImGui::EndGroup();
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Highligh Col_1##1", (float*)&c.hl_col_1, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Highlight 1", &c.hl_1_pos_begin, &c.hl_1_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Highlight Col_1##2", (float*)&c.hl_col_2, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Highlight 2", &c.hl_2_pos_begin, &c.hl_2_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
 
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Underline Col_1##1", (float*)&c.ul_col_1, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Underline 1", &c.ul_1_pos_begin, &c.ul_1_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Underline Col_2##1", (float*)&c.ul_col_2, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Underline 2", &c.ul_2_pos_begin, &c.ul_2_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
 
-            ImGui::BeginGroup();
-            ImGui::ColorEdit4("Underline Col_1##1", (float*)&c.ul_col_1, col_flag);
-            ImGui::SameLine();
-            ImGui::DragIntRange2("Underline Range 1", &c.ul_1_pos_begin, &c.ul_1_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
-            ImGui::EndGroup();
-            ImGui::BeginGroup();
-            ImGui::ColorEdit4("Underline Col_2##1", (float*)&c.ul_col_2, col_flag);
-            ImGui::SameLine();
-            ImGui::DragIntRange2("Underline Range 2", &c.ul_2_pos_begin, &c.ul_2_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
-            ImGui::EndGroup();
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Strikethrough Col_1##1", (float*)&c.st_col_1, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Strikethrough 1", &c.st_1_pos_begin, &c.st_1_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Strikethrough Col_2##1", (float*)&c.st_col_2, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Strikethrough 2", &c.st_2_pos_begin, &c.st_2_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
 
-            ImGui::BeginGroup();
-            ImGui::ColorEdit4("Strikethrough Col_1##1", (float*)&c.st_col_1, col_flag);
-            ImGui::SameLine();
-            ImGui::DragIntRange2("Strikethrough Range 1", &c.st_1_pos_begin, &c.st_1_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
-            ImGui::EndGroup();
-            ImGui::BeginGroup();
-            ImGui::ColorEdit4("Strikethrough Col_2##1", (float*)&c.st_col_2, col_flag);
-            ImGui::SameLine();
-            ImGui::DragIntRange2("Strikethrough Range 2", &c.st_2_pos_begin, &c.st_2_pos_end, 1, 0, len, "Pos Begin: %d", "Pos End: %d");
-            ImGui::EndGroup();
-
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Text Mask Col_1##1", (float*)&c.msk_col_1, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Mask 1", &c.msk_1_pos_begin, &c.msk_1_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
+                ImGui::BeginGroup();
+                ImGui::ColorEdit4("Text Mask Col_2##1", (float*)&c.msk_col_2, col_flag);
+                ImGui::SameLine();
+                ImGui::DragIntRange2("Mask 2", &c.msk_2_pos_begin, &c.msk_2_pos_end, 1, 0, len, "Range Begin: %d", "Range End: %d");
+                ImGui::EndGroup();
+            }
 
             auto style_callback = [](const char* text, const char* text_end, void* cb_context) -> ImTextCustomStyle
             {
@@ -1110,12 +1134,18 @@ static void ShowDemoWindowWidgets()
                     style.Range(text + c.st_1_pos_begin, text + c.st_1_pos_end).Strkethrough(c.st_col_1);
                     style.Range(text + c.st_2_pos_begin, text + c.st_2_pos_end).Strkethrough(c.st_col_2);
                 }
-
+                // textmask for a range
+                if (c.textmask)
+                {
+                    style.Range(text + c.msk_1_pos_begin, text + c.msk_1_pos_end).Mask(c.msk_col_1);
+                    style.Range(text + c.msk_2_pos_begin, text + c.msk_2_pos_end).Mask(c.msk_col_2);
+                }
                 return style;
             };
 
+            ImGui::NewLine();
             ImGui::TextUnformatted(text, NULL, c.wrapped, c.disabled, style_callback, &c);
-
+            ImGui::NewLine();
 
             ImGui::TreePop();
         }
