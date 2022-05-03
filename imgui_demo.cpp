@@ -1103,12 +1103,8 @@ static void ShowDemoWindowWidgets()
                 ImGui::EndGroup();
             }
 
-            auto style_callback = [](const char* text, const char* text_end, void* cb_context) -> ImTextCustomStyle
-            {
-                (void)text_end;//suppress warning
-                _Config &c = *(_Config*)cb_context;//suppres warning
 
-                ImTextCustomStyle style;
+                ImTextCustomization style;
 
                 // text color in range
                 if (c.textcolor)
@@ -1140,100 +1136,11 @@ static void ShowDemoWindowWidgets()
                     style.Range(text + c.msk_1_pos_begin, text + c.msk_1_pos_end).Mask(c.msk_col_1);
                     style.Range(text + c.msk_2_pos_begin, text + c.msk_2_pos_end).Mask(c.msk_col_2);
                 }
-                return style;
-            };
 
             ImGui::NewLine();
-            ImGui::TextUnformatted(text, NULL, c.wrapped, c.disabled, style_callback, &c);
+            ImGui::TextUnformatted(text, NULL, c.wrapped, c.disabled, style);
             ImGui::NewLine();
 
-            ImGui::TreePop();
-        }
-
-
-        IMGUI_DEMO_MARKER("Widgets/Text/Word Color, Highlight, Underline, Etc.");
-        if (ImGui::TreeNode("Word with  Color, Highlight, Underline Etc."))
-        {
-            static bool wrapped = false;
-            static bool disabled = false;
-            static bool highlight = false;
-            static bool underline = false;
-            static bool strikethrough = false;
-
-            ImGui::BeginGroup();
-            ImGui::Checkbox("Wrap", &wrapped);
-            ImGui::SameLine();
-            ImGui::Checkbox("Disabe", &disabled);
-            ImGui::SameLine();
-            ImGui::Checkbox("Highlight", &highlight);
-            ImGui::SameLine();
-            ImGui::Checkbox("Underline", &underline);
-            ImGui::SameLine();
-            ImGui::Checkbox("Strikethrough", &strikethrough);
-            ImGui::EndGroup();
-
-            // Demo the colorful text. In practice, we can generate the index for a pattern or text with a grep like tool.
-            const static char* text = "Hello, Dear ImGui Colorfull Text. Underline text goes \r\n\r\nhere. Strikethrough text goes here. It also supports the highlight text. "
-                "Normal text goes here. Turn on/off Wrap, Disable, Underline and Strikethrough to see different styles in one line.";
-
-            auto style_callback = [](const char* text, const char* text_end, void* cb_context) -> ImTextCustomStyle
-            {
-                (void)text_end;//suppress warning
-                (void)cb_context;//suppres warning
-
-                ImTextCustomStyle style;
-                ImColor text_color, highlight_col;
-
-                // colorfull text
-                const char* p = strstr(text, "Dear"); text_color = ImColor(255, 0, 0, 255);
-                style.Range(p, p + strlen("Dear")).TextColor(text_color).Disabled(disabled);
-
-                p = strstr(text, "ImGui"); text_color = ImColor(0, 255, 0, 255);
-                style.Range(p, p + strlen("ImGui")).TextColor(text_color).Disabled(disabled);
-
-                p = strstr(text, "Colorfull"); text_color = ImColor(255, 255, 0, 255);
-                style.Range(p, p + strlen("Colorfull")).TextColor(text_color).Disabled(disabled);
-
-                p = strstr(text, "Text."); text_color = ImColor(0, 0, 255, 255);
-                style.Range(p, p + strlen("Text")).TextColor(text_color).Disabled(disabled);
-
-                // underline with different color
-                if (underline)
-                {
-                    p = strstr(text, "olorfu");
-                    style.Range(p, p + strlen("olorfu")).Unerline(ImColor(0, 255, 0, 255));
-
-                    p = strstr(text, "Underline text goes \r\n\r\nhere");
-                    style.Range(p, p + strlen("Underline text goes \r\n\r\nhere")).Unerline();
-                }
-
-                if (strikethrough)
-                {
-                    p = strstr(text, "Strikethrough text goes here");
-                    // If color = 0 text color will be used.
-                    ImColor strikethrough_col(255, 0, 0, 255);
-                    style.Range(p, p + strlen("Strikethrough text goes here")).Strkethrough(strikethrough_col);
-                }
-                if (highlight)
-                {
-                    p = strstr(text, "the highlight text"); highlight_col = ImColor(226, 217, 78, 255);
-                    style.Range(p, p + strlen("the highlight text")).Highlight(highlight_col);
-                }
-
-                return style;
-            };
-
-            auto style_callback_hello = [](const char* text, const char* text_end, void* cb_context) -> ImVector<ImTextCustomStyle>
-            {
-                ImVector< ImTextCustomStyle> style;
-                return style;
-            };
-
-            //ImGui::TextUnformatted("X", NULL, wrapped, disabled, style_callback_hello, NULL);
-
-            ImGui::TextUnformatted(text, NULL, wrapped, disabled, style_callback, NULL);
-
-          
             ImGui::TreePop();
         }
 

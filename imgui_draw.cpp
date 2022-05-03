@@ -1574,7 +1574,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, 0, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, ImGuiTextStyleCallback style_callback, void* cb_context)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect,ImTextCustomization customization)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1600,7 +1600,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, style_callback, cb_context);
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, customization);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -3540,7 +3540,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, ImGuiTextStyleCallback style_callback, void* cb_context) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, ImTextCustomization customization) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -3556,6 +3556,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     const float line_height = FontSize * scale;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
+    const bool style_callback = customization._Ranges.Size > 0;
 
     // Fast-forward to first visible line
     const char* s = text_begin;
@@ -3617,20 +3618,15 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
 
 
-    ImTextCustomStyle custom_style;
-    if (style_callback)
-    {
-        custom_style = style_callback(text_begin, text_end, cb_context);
-    }
-   
-     ImU32 text_col = col;
+    ImTextCustomization custom_style = customization;
+    ImU32 text_col = col;
 
     // Internal struct to eclose all text customization processing
     struct _CustomizationParser
     {
         // customization for the text
         // readonly during the liftime of this struct
-        ImTextCustomStyle* custom_style;
+        ImTextCustomization* custom_style;
         // the text passed to RenderText
         // readonly during the liftime of this struct
         const char* text_begin;
@@ -3652,7 +3648,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         float strikethrough_offset_y;
 
         // style for the current glyph and last glyph
-        ImTextCustomStyle::Style style, last_style;
+        ImTextCustomization::Style style, last_style;
 
 
 
@@ -3702,7 +3698,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         Segments mask_segments;
 
         // CTOR
-        _CustomizationParser(ImU32 text_col, float size, const char* text_begin, const char* text_end, const ImFont *font, ImTextCustomStyle* custom_style):
+        _CustomizationParser(ImU32 text_col, float size, const char* text_begin, const char* text_end, const ImFont *font, ImTextCustomization* custom_style):
             text_col(text_col), size(size), text_begin(text_begin), text_end(text_end), font(font), custom_style(custom_style)
         {
             line_height = size;
