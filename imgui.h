@@ -2391,12 +2391,18 @@ struct ImTextCustomization
 
     ImVector<_RangeItem> _Ranges;
 
-    ImTextCustomization& Range(const char* begin, const char* end)
+    // Sepcify a range of the text first 
+    ImTextCustomization& Range(const char* begin, const char* end=NULL)
     {
         // add this range to list
-        _Ranges.push_back(_RangeItem(begin, end));
+        if (end != NULL)
+            _Ranges.push_back(_RangeItem(begin, end));
+        else
+            _Ranges.push_back(_RangeItem(begin, begin+strlen(begin)));
+
         return *this;
     }
+    // The last range specified will be colored
     ImTextCustomization& TextColor(ImColor col)
     {
         _RangeItem& item = _Ranges.back();
@@ -2404,6 +2410,7 @@ struct ImTextCustomization
         item.TextColor = col;
         return *this;
     }
+    // The last range specified will be highlighted 
     ImTextCustomization& Highlight(ImColor col)
     {
         _RangeItem& item = _Ranges.back();
@@ -2411,6 +2418,7 @@ struct ImTextCustomization
         item.HighlightColor = col;
         return *this;
     }
+    // The last range specified will be underlined
     ImTextCustomization& Unerline(ImColor col=0)
     {
         _RangeItem& item = _Ranges.back();
@@ -2418,6 +2426,7 @@ struct ImTextCustomization
         item.UnderlineColor = col;
         return *this;
     }
+    // The last range specified will be striked through
     ImTextCustomization& Strkethrough(ImColor col=0)
     {
         _RangeItem& item = _Ranges.back();
@@ -2425,6 +2434,7 @@ struct ImTextCustomization
         item.StrikethroughColor = col;
         return *this;
     }
+    // The last range specified will be masked 
     ImTextCustomization& Mask(ImColor col = 0)
     {
         _RangeItem& item = _Ranges.back();
@@ -2432,6 +2442,7 @@ struct ImTextCustomization
         item.MaskColor = col;
         return *this;
     }
+    // The last range specified will be shown as disabled
     ImTextCustomization& Disabled(bool disabled = true)
     {
         _RangeItem& item = _Ranges.back();

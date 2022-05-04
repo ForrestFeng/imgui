@@ -967,9 +967,57 @@ static void ShowDemoWindowWidgets()
         IMGUI_DEMO_MARKER("Widgets/Text/Text Customization");
         if (ImGui::TreeNode("Text Customization Simple"))
         {
-            ImGui::Text("Underline");
+            ImColor red(255, 0, 0, 255);
+            ImColor green(0, 255, 0, 255);
+            ImColor blue(0, 0, 255, 255);
+            ImColor yellow(255, 255, 0, 255); 
+            ImColor brown(187, 126, 0, 255);
+            ImColor cyan(0, 255, 255, 255);
+            ImColor magenta(255, 0, 255, 125);
 
-//            ImGui::TextUnformatted("The fox jumps over the box", NULL, false, false,);
+            const char* text = "The quick red fox jumps over the green box.";
+
+            ImGui::NewLine();
+            ImGui::Text("Color the whole text");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).TextColor(green));
+
+            ImGui::NewLine();
+            ImGui::Text("Color the sustring of the text");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text + 14, text + 17).TextColor(red).Range(text + 39, text + 42).TextColor(green));
+
+            ImGui::NewLine();
+            ImGui::Text("Underline");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Unerline());
+
+            ImGui::NewLine();
+            ImGui::Text("Underline with color");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Unerline(blue));
+
+            ImGui::NewLine();
+            ImGui::Text("Strikethrough");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Strkethrough());
+
+            ImGui::NewLine();
+            ImGui::Text("Strikethrough with color");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Strkethrough(red));
+
+            ImGui::NewLine();
+            ImGui::Text("Hilight the text with brown");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Highlight(brown));
+
+            ImGui::NewLine();
+            ImGui::Text("Mask the text so it is not readable");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text+10, text+17).Mask());
+
+            ImGui::NewLine();
+            ImGui::Text("Mask the text with color");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text+10, text+17).Mask(cyan));
+
+            ImGui::NewLine();
+            ImGui::Text("Mask the text with semitransparent color");
+            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text+10, text+28).Mask(magenta));
+            ImGui::NewLine();
+
             ImGui::TreePop();
         }
 
@@ -977,7 +1025,7 @@ static void ShowDemoWindowWidgets()
         IMGUI_DEMO_MARKER("Widgets/Text/Text Customization");
         if (ImGui::TreeNode("Text Customization Combined"))
         {
-     
+
             static ImGuiColorEditFlags col_flag = ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
 
 
@@ -1104,38 +1152,38 @@ static void ShowDemoWindowWidgets()
             }
 
 
-                ImTextCustomization style;
+            ImTextCustomization style;
 
-                // text color in range
-                if (c.textcolor)
-                {
-                    style.Range(text + c.txt_1_pos_begin, text + c.txt_1_pos_end).TextColor(c.txt_col_1).Disabled(c.disabled);
-                    style.Range(text + c.txt_2_pos_begin, text + c.txt_2_pos_end).TextColor(c.txt_col_2).Disabled(c.disabled);
-                }
-                // highlight 
-                if (c.highlight)
-                {
-                    style.Range(text + c.hl_1_pos_begin, text + c.hl_1_pos_end).Highlight(c.hl_col_1);
-                    style.Range(text + c.hl_2_pos_begin, text + c.hl_2_pos_end).Highlight(c.hl_col_2);
-                }
-                // underline with different color
-                if (c.underline)
-                {
-                    style.Range(text + c.ul_1_pos_begin, text + c.ul_1_pos_end).Unerline(c.ul_col_1);
-                    style.Range(text + c.ul_2_pos_begin, text + c.ul_2_pos_end).Unerline(c.ul_col_2);
-                }
-                // strikethrough for a range
-                if (c.strikethrough)
-                {
-                    style.Range(text + c.st_1_pos_begin, text + c.st_1_pos_end).Strkethrough(c.st_col_1);
-                    style.Range(text + c.st_2_pos_begin, text + c.st_2_pos_end).Strkethrough(c.st_col_2);
-                }
-                // textmask for a range
-                if (c.textmask)
-                {
-                    style.Range(text + c.msk_1_pos_begin, text + c.msk_1_pos_end).Mask(c.msk_col_1);
-                    style.Range(text + c.msk_2_pos_begin, text + c.msk_2_pos_end).Mask(c.msk_col_2);
-                }
+            // text color range
+            if (c.textcolor)
+            {
+                style.Range(text + c.txt_1_pos_begin, text + c.txt_1_pos_end).TextColor(c.txt_col_1).Disabled(c.disabled);
+                style.Range(text + c.txt_2_pos_begin, text + c.txt_2_pos_end).TextColor(c.txt_col_2).Disabled(c.disabled);
+            }
+            // highlight range
+            if (c.highlight)
+            {
+                style.Range(text + c.hl_1_pos_begin, text + c.hl_1_pos_end).Highlight(c.hl_col_1);
+                style.Range(text + c.hl_2_pos_begin, text + c.hl_2_pos_end).Highlight(c.hl_col_2);
+            }
+            // underline range
+            if (c.underline)
+            {
+                style.Range(text + c.ul_1_pos_begin, text + c.ul_1_pos_end).Unerline(c.ul_col_1);
+                style.Range(text + c.ul_2_pos_begin, text + c.ul_2_pos_end).Unerline(c.ul_col_2);
+            }
+            // strikethrough range
+            if (c.strikethrough)
+            {
+                style.Range(text + c.st_1_pos_begin, text + c.st_1_pos_end).Strkethrough(c.st_col_1);
+                style.Range(text + c.st_2_pos_begin, text + c.st_2_pos_end).Strkethrough(c.st_col_2);
+            }
+            // mask range
+            if (c.textmask)
+            {
+                style.Range(text + c.msk_1_pos_begin, text + c.msk_1_pos_end).Mask(c.msk_col_1);
+                style.Range(text + c.msk_2_pos_begin, text + c.msk_2_pos_end).Mask(c.msk_col_2);
+            }
 
             ImGui::NewLine();
             ImGui::TextUnformatted(text, NULL, c.wrapped, c.disabled, style);
