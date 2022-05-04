@@ -983,7 +983,7 @@ static void ShowDemoWindowWidgets()
             ImGui::TextUnformatted(text, NULL, true, false, &tc.Range(text).TextColor(green));
 
             ImGui::NewLine();
-            ImGui::Text("Color the sustring of the text");
+            ImGui::Text("Color the substring of the text");
             ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text + 14, text + 17).TextColor(red).Range(text + 39, text + 42).TextColor(green));
 
             ImGui::NewLine();
