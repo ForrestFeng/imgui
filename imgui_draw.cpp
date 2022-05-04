@@ -1574,7 +1574,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, 0, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect,const ImTextCustomization &customization)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect,const ImTextCustomization *customization)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -3540,7 +3540,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, const ImTextCustomization &customization) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, const ImTextCustomization *customization) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -3556,7 +3556,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     const float line_height = FontSize * scale;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
-    const bool style_callback = customization._Ranges.Size > 0;
 
     // Fast-forward to first visible line
     const char* s = text_begin;
@@ -3593,7 +3592,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
     // Create a dedicated draw list for text. The reson is that the highlight texts must draw before the text.
     // The highlight texts is genrated during the glyph drawing process.
-    if (style_callback)
+    if (customization)
     {
         draw_list_text = &_draw_list_text;
         draw_list_text->AddDrawCmd();
@@ -3604,8 +3603,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     }
     
     // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
-    const int vtx_count_max = (int)(text_end - text_begin) * 4;
-    const int idx_count_max = (int)(text_end - text_begin) * 6;
+    const int vtx_count_max = (int)(text_end - s) * 4;
+    const int idx_count_max = (int)(text_end - s) * 6;
     const int idx_expected_size = draw_list_text->IdxBuffer.Size + idx_count_max;
 
     // Reserve for text
@@ -3617,8 +3616,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
 
-
-    ImTextCustomization custom_style = customization;
     ImU32 text_col = col;
 
     // Internal struct to eclose all text customization processing
@@ -3626,7 +3623,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     {
         // customization for the text
         // readonly during the liftime of this struct
-        ImTextCustomization* custom_style;
+        const ImTextCustomization* custom_style;
         // the text passed to RenderText
         // readonly during the liftime of this struct
         const char* text_begin;
@@ -3698,12 +3695,62 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         Segments mask_segments;
 
         // CTOR
-        _CustomizationParser(ImU32 text_col, float size, const char* text_begin, const char* text_end, const ImFont *font, ImTextCustomization* custom_style):
+        _CustomizationParser(ImU32 text_col, float size, const char* text_begin, const char* text_end, const ImFont *font, const ImTextCustomization* custom_style):
             text_col(text_col), size(size), text_begin(text_begin), text_end(text_end), font(font), custom_style(custom_style)
         {
             line_height = size;
             // Reference MS Word Offic SW, the strke y position is about 59% line_height down.
             strikethrough_offset_y = (line_height * 59.f / 100.f);
+        }
+
+        // Called for every glyph with is about to draw. It returns the color for the glyph 
+        ImU32 OnNewGlyph(const char* glyph_pos, const char* glyph_end, unsigned int glyph_code, float x_pos, float y_pos)
+        {
+            // this->x and this-> are readonly only change it here.
+            this->x = x_pos;
+            this->y = y_pos;
+
+            ImU32 col = text_col;
+
+            // check custom style
+            last_style = style;
+            style = custom_style->GetStyleByPositin(glyph_pos);
+
+            // Update text color
+            if (style.Disabled)
+            {
+                col = text_col;
+            }
+            else if (style.Text)
+            {
+                col = style.TextColor;
+            }
+
+            // call internal method to process for each segments
+            _InternalOnNewGlyph(highlight_segments, glyph_end, glyph_code, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0.0f, line_height);
+            _InternalOnNewGlyph(underline_segments, glyph_end, glyph_code, style.UnderlineColor, last_style.UnderlineColor, style.Underline, last_style.Underline, line_height, line_height);
+            _InternalOnNewGlyph(strikethrough_segments, glyph_end, glyph_code, style.StrikethroughColor, last_style.StrikethroughColor, style.Strikethrough, last_style.Strikethrough, strikethrough_offset_y, strikethrough_offset_y);
+            _InternalOnNewGlyph(mask_segments, glyph_end, glyph_code, style.MaskColor, last_style.MaskColor, style.Mask, last_style.Mask, 0.0f, line_height);
+            return col;
+        }
+
+        // Handles the new line which caused by word warp or \n. Multiple \n will result the new_line > 1
+        void OnNewLine(const char* char_pos, float x_pos, float y_pos)
+        {
+            // Remember the x, y position of the last glyph before we start a new line
+            highlight_segments.OnNewLine(char_pos, x_pos, y_pos);
+            underline_segments.OnNewLine(char_pos, x_pos, y_pos);
+            strikethrough_segments.OnNewLine(char_pos, x_pos, y_pos);
+            mask_segments.OnNewLine(char_pos, x_pos, y_pos);
+
+            // Reaches to the end of the end of the text. this is the last chance to close all open position
+            if (char_pos == text_end)
+            {
+                _InternalOnNewGlyph(highlight_segments, char_pos, 0, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0.0f, line_height);
+                _InternalOnNewGlyph(underline_segments, char_pos, 0, style.UnderlineColor, last_style.UnderlineColor, style.Underline, last_style.Underline, line_height, line_height);
+                _InternalOnNewGlyph(strikethrough_segments, char_pos, 0, style.StrikethroughColor, last_style.StrikethroughColor, style.Strikethrough, last_style.Strikethrough, strikethrough_offset_y, strikethrough_offset_y);
+                _InternalOnNewGlyph(mask_segments, char_pos, 0, style.MaskColor, last_style.MaskColor, style.Mask, last_style.Mask, 0.0f, line_height);
+            }
         }
 
         // skip to process the successive glyph
@@ -3725,25 +3772,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             while (mask_segments.data.Size > 0 && mask_segments.data.back().EndPos.x == FLT_MAX)
             {
                 mask_segments.data.pop_back();
-            }
-        }
-
-        // Handles the new line which caused by word warp or \n. Multiple \n will result the new_line > 1
-        void OnNewLine(const char* char_pos, float x_pos, float y_pos)
-        {
-            // Remember the x, y position of the last glyph before we start a new line
-            highlight_segments.OnNewLine(char_pos, x_pos, y_pos);
-            underline_segments.OnNewLine(char_pos, x_pos, y_pos);
-            strikethrough_segments.OnNewLine(char_pos, x_pos, y_pos);
-            mask_segments.OnNewLine(char_pos, x_pos, y_pos);
-
-            // Reaches to the end of the end of the text. this is the last chance to close all open position
-            if (char_pos == text_end)
-            {
-                _InternalOnNewGlyph(highlight_segments, char_pos, 0, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0.0f, line_height);
-                _InternalOnNewGlyph(underline_segments, char_pos, 0, style.UnderlineColor, last_style.UnderlineColor, style.Underline, last_style.Underline, line_height, line_height);
-                _InternalOnNewGlyph(strikethrough_segments, char_pos, 0, style.StrikethroughColor, last_style.StrikethroughColor, style.Strikethrough, last_style.Strikethrough, strikethrough_offset_y, strikethrough_offset_y);
-                _InternalOnNewGlyph(mask_segments, char_pos, 0, style.MaskColor, last_style.MaskColor, style.Mask, last_style.Mask, 0.0f, line_height);
             }
         }
 
@@ -3817,41 +3845,11 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 }
             }
         }
-
-        // Called for every glyph with is about to draw. It returns the color for the glyph 
-        ImU32 OnNewGlyph(const char* glyph_pos, const char* glyph_end, unsigned int glyph_code, float x_pos, float y_pos)
-        {
-            // this->x and this-> are readonly only change it here.
-            this->x = x_pos;
-            this->y = y_pos;
-
-            ImU32 col = text_col;
-
-            // check custom style
-            last_style = style;
-            style = custom_style->GetStyleByPositin(glyph_pos);
-
-            // Update text color
-            if (style.Disabled)
-            {
-                col = text_col;
-            }
-            else if (style.Text)
-            {
-                col = style.TextColor;
-            }
-
-            // call internal method to process for each segments
-            _InternalOnNewGlyph(highlight_segments, glyph_end, glyph_code, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0.0f, line_height);
-            _InternalOnNewGlyph(underline_segments, glyph_end, glyph_code, style.UnderlineColor, last_style.UnderlineColor, style.Underline, last_style.Underline, line_height, line_height);
-            _InternalOnNewGlyph(strikethrough_segments, glyph_end, glyph_code, style.StrikethroughColor, last_style.StrikethroughColor, style.Strikethrough, last_style.Strikethrough, strikethrough_offset_y, strikethrough_offset_y);
-            _InternalOnNewGlyph(mask_segments, glyph_end, glyph_code, style.MaskColor, last_style.MaskColor, style.Mask, last_style.Mask, 0.0f, line_height);
-            return col;
-        }
+     
     };
 
     // Create test customizaiton parser, do nothing if no text customization is used
-    _CustomizationParser parser(text_col, size, text_begin, text_end, this, &custom_style);
+    _CustomizationParser parser(text_col, size, text_begin, text_end, this, customization);
 
     while (s < text_end)
     {
@@ -3881,30 +3879,18 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (ImCharIsBlankA(c))
-                    {
-                        s++;
-                    }
-                    else if (c == '\n')
-                    {
-                        s++;
-                        break;
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    if (ImCharIsBlankA(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
                 }
                 // process the new line event
-                if (style_callback)
-                 parser.OnNewLine(s, old_x, old_y);
+                if (customization)
+                   parser.OnNewLine(s, old_x, old_y);
                 continue;
             }
         }
 
         // Decode and advance source
         unsigned int c = (unsigned int)*s;
-        const char* pos_start = s; //backup it for customization style check
+        const char* glyph_pos = s; //backup it for customization style check
         if (c < 0x80)
         {
             s += 1;
@@ -3914,7 +3900,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             s += ImTextCharFromUtf8(&c, s, text_end);
             if (c == 0) // Malformed UTF-8?
             {
-                if (style_callback)
+                if (customization)
                     parser.OnSkipSuccessiveGlyph();
                 break;
             }
@@ -3936,12 +3922,12 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 y += line_height;
 
                 // process the new line event
-                if (style_callback)
+                if (customization)
                     parser.OnNewLine(s, old_x, old_y);
 
                 if (y > clip_rect.w)
                 {
-                    if (style_callback)
+                    if (customization)
                         parser.OnSkipSuccessiveGlyph();
                     break; // break out of main loop
                 }
@@ -3951,10 +3937,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 continue;
         }
 
-        if (style_callback)
-        {
-            col = parser.OnNewGlyph(pos_start, s, c, x, y);
-        }
+        if (customization)
+            col = parser.OnNewGlyph(glyph_pos, s, c, x, y);
+
         const ImFontGlyph* glyph = FindGlyph((ImWchar)c);
         if (glyph == NULL)
             continue;
@@ -4034,7 +4019,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     draw_list_text->_VtxCurrentIdx = vtx_current_idx;
 
 
-    if (style_callback)
+    if (customization)
     {
         // Draw the highlight firt because it's the backgroud of the text
         for (int i = 0; i < parser.highlight_segments.data.Size; i++)

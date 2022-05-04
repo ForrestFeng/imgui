@@ -976,46 +976,47 @@ static void ShowDemoWindowWidgets()
             ImColor magenta(255, 0, 255, 125);
 
             const char* text = "The quick red fox jumps over the green box.";
+            ImTextCustomization tc;
 
             ImGui::NewLine();
-            ImGui::Text("Color the whole text");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).TextColor(green));
+            ImGui::Text("Color the whole text");            
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Range(text).TextColor(green));
 
             ImGui::NewLine();
             ImGui::Text("Color the sustring of the text");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text + 14, text + 17).TextColor(red).Range(text + 39, text + 42).TextColor(green));
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text + 14, text + 17).TextColor(red).Range(text + 39, text + 42).TextColor(green));
 
             ImGui::NewLine();
             ImGui::Text("Underline");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Unerline());
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Unerline());
 
             ImGui::NewLine();
             ImGui::Text("Underline with color");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Unerline(blue));
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Unerline(blue));
 
             ImGui::NewLine();
             ImGui::Text("Strikethrough");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Strkethrough());
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Strkethrough());
 
             ImGui::NewLine();
             ImGui::Text("Strikethrough with color");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Strkethrough(red));
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Strkethrough(red));
 
             ImGui::NewLine();
             ImGui::Text("Hilight the text with brown");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text).Highlight(brown));
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Highlight(brown));
 
             ImGui::NewLine();
             ImGui::Text("Mask the text so it is not readable");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text+10, text+17).Mask());
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text+10, text+17).Mask());
 
             ImGui::NewLine();
             ImGui::Text("Mask the text with color");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text+10, text+17).Mask(cyan));
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text+10, text+17).Mask(cyan));
 
             ImGui::NewLine();
             ImGui::Text("Mask the text with semitransparent color");
-            ImGui::TextUnformatted(text, NULL, true, false, ImTextCustomization().Range(text+10, text+28).Mask(magenta));
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text+10, text+28).Mask(magenta));
             ImGui::NewLine();
 
             ImGui::TreePop();
@@ -1186,7 +1187,7 @@ static void ShowDemoWindowWidgets()
             }
 
             ImGui::NewLine();
-            ImGui::TextUnformatted(text, NULL, c.wrapped, c.disabled, style);
+            ImGui::TextUnformatted(text, NULL, c.wrapped, c.disabled, &style);
             ImGui::NewLine();
 
             ImGui::TreePop();
